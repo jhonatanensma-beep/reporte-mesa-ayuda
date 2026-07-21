@@ -7,43 +7,53 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
     :root {
-        --teal: #0092B7;
-        --teal-oscuro: #00839C;
-        --carbon: #1D1D1B;
-        --rojo: #C0392B;
-        --verde: #27AE60;
-        --naranja: #E67E22;
+        --teal: #0092B7; --teal-oscuro: #00839C; --carbon: #1D1D1B;
+        --rojo: #C0392B; --verde: #27AE60; --naranja: #E67E22;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #F4F6F7; color: var(--carbon); padding: 24px; }
     header {
         background: linear-gradient(135deg, var(--teal-oscuro), var(--teal));
-        color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 24px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        display: flex; align-items: center; gap: 20px;
+        color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 20px;
     }
     header img { height: 60px; background: white; border-radius: 8px; padding: 6px; }
     header .titulos h1 { font-size: 22px; margin-bottom: 4px; }
     header .titulos p { opacity: 0.9; font-size: 13px; }
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .kpi-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid var(--teal); }
+
+    .filtros {
+        background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
+        position: sticky; top: 12px; z-index: 10;
+    }
+    .filtros label { font-size: 12px; font-weight: 700; color: var(--teal-oscuro); display: block; margin-bottom: 4px; }
+    .filtros select { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; min-width: 180px; }
+    .filtros button {
+        background: var(--carbon); color: white; border: none; padding: 9px 16px;
+        border-radius: 6px; cursor: pointer; font-size: 13px; align-self: flex-end;
+    }
+    .filtros button:hover { opacity: 0.85; }
+    .filtros .contador { margin-left: auto; font-size: 13px; color: #666; align-self: flex-end; }
+    .filtro-activo { font-size: 12px; background: #E8F6F9; color: var(--teal-oscuro); padding: 4px 10px; border-radius: 20px; margin-top: 2px; display: inline-block; }
+
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .kpi-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid var(--teal); transition: all 0.2s; }
     .kpi-card.alerta { border-left-color: var(--rojo); }
     .kpi-card .valor { font-size: 32px; font-weight: 700; }
     .kpi-card .etiqueta { font-size: 13px; color: #666; margin-top: 4px; }
-    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+
+    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
     .chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-    .chart-box h3 { font-size: 15px; margin-bottom: 12px; color: var(--teal-oscuro); }
-    .filtros { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
-    .filtros label { font-size: 13px; font-weight: 600; color: var(--teal-oscuro); margin-right: 6px; }
-    .filtros select { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
-    .filtros .contador { margin-left: auto; font-size: 13px; color: #666; }
+    .chart-box h3 { font-size: 15px; margin-bottom: 4px; color: var(--teal-oscuro); }
+    .chart-box .ayuda { font-size: 11px; color: #999; margin-bottom: 10px; }
+    .chart-box canvas { cursor: pointer; }
+
     .tabla-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: var(--carbon); color: white; text-align: left; padding: 10px 12px; position: sticky; top: 0; cursor: pointer; }
+    th { background: var(--carbon); color: white; text-align: left; padding: 10px 12px; position: sticky; top: 0; }
     td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-    .fila-vencida { background: #FDEDEC; }
-    .fila-vencida td:last-child { color: var(--rojo); font-weight: 700; }
-    .oculto { display: none; }
+    tr.fila-vencida td:last-child { color: var(--rojo); font-weight: 700; }
+    tr.fila-vencida { background: #FDEDEC; }
     footer { text-align: center; color: #999; font-size: 12px; margin-top: 24px; }
 </style>
 </head>
@@ -53,47 +63,58 @@
     <img src="logo.png" alt="Constructora Capital" onerror="this.style.display='none'">
     <div class="titulos">
         <h1>Reporte Mesa de Ayuda TI</h1>
-        <p>Constructora Capital Medellín · Actualizado automáticamente · Última actualización: 21/07/2026 18:08</p>
+        <p>Constructora Capital Medellín · Actualizado automáticamente · Última actualización: 21/07/2026 18:24</p>
     </div>
 </header>
 
+<div class="filtros">
+    <div>
+        <label>Categoría</label>
+        <select id="filtroGrupo"><option value="">Todas</option></select>
+    </div>
+    <div>
+        <label>Técnico</label>
+        <select id="filtroAgente"><option value="">Todos</option></select>
+    </div>
+    <div>
+        <label>Prioridad</label>
+        <select id="filtroPrioridad"><option value="">Todas</option></select>
+    </div>
+    <button id="btnLimpiar">Quitar filtros</button>
+    <div class="contador" id="contador"></div>
+</div>
+
 <div class="kpis">
     <div class="kpi-card">
-        <div class="valor">103</div>
+        <div class="valor" id="kpiTotal">0</div>
         <div class="etiqueta">Tickets abiertos / pendientes</div>
     </div>
     <div class="kpi-card alerta">
-        <div class="valor">58</div>
+        <div class="valor" id="kpiVencidos">0</div>
         <div class="etiqueta">Tickets vencidos (7+ días)</div>
     </div>
     <div class="kpi-card">
-        <div class="valor">56.3%</div>
+        <div class="valor" id="kpiPorcentaje">0%</div>
         <div class="etiqueta">Porcentaje de vencidos</div>
     </div>
 </div>
 
 <div class="charts">
-    <div class="chart-box"><h3>Tickets por categoría</h3><canvas id="chartGrupo"></canvas></div>
-    <div class="chart-box"><h3>Tickets por técnico</h3><canvas id="chartAgente"></canvas></div>
-    <div class="chart-box"><h3>Tickets por prioridad</h3><canvas id="chartPrioridad"></canvas></div>
-</div>
-
-<div class="filtros">
-    <div>
-        <label>Categoría</label>
-        <select id="filtroGrupo">
-            <option value="">Todas</option>
-            <option value="Analitica">Analitica</option><option value="Servicios Administrativos">Servicios Administrativos</option><option value="Servicios TI">Servicios TI</option><option value="Sinco ERP">Sinco ERP</option>
-        </select>
+    <div class="chart-box">
+        <h3>Tickets por categoría</h3>
+        <div class="ayuda">Haz clic en una barra para filtrar</div>
+        <canvas id="chartGrupo"></canvas>
     </div>
-    <div>
-        <label>Técnico</label>
-        <select id="filtroAgente">
-            <option value="">Todos</option>
-            <option value="Angie Paola Olaya Martinez">Angie Paola Olaya Martinez</option><option value="Jhonatan Medina Medina Muñoz">Jhonatan Medina Medina Muñoz</option><option value="Julián David Alzate Muñoz">Julián David Alzate Muñoz</option><option value="Michael James James Roman Román Alzate">Michael James James Roman Román Alzate</option><option value="Miguel Angel Aristizabal Alvarez">Miguel Angel Aristizabal Alvarez</option><option value="Sin asignar">Sin asignar</option><option value="Yonatan Ramirez Ramírez Rendón">Yonatan Ramirez Ramírez Rendón</option><option value="Yonathan Garcia Garcia">Yonathan Garcia Garcia</option>
-        </select>
+    <div class="chart-box">
+        <h3>Tickets por técnico</h3>
+        <div class="ayuda">Haz clic en una barra para filtrar</div>
+        <canvas id="chartAgente"></canvas>
     </div>
-    <div class="contador" id="contador"></div>
+    <div class="chart-box">
+        <h3>Tickets por prioridad</h3>
+        <div class="ayuda">Haz clic en una porción para filtrar</div>
+        <canvas id="chartPrioridad"></canvas>
+    </div>
 </div>
 
 <div class="tabla-box">
@@ -102,984 +123,142 @@
         <thead>
             <tr><th>ID</th><th>Asunto</th><th>Estado</th><th>Prioridad</th><th>Categoría</th><th>Técnico</th><th>Días vencido</th></tr>
         </thead>
-        <tbody>
-            
-        <tr class="fila-vencida" data-grupo="Sinco ERP" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>5090</td>
-            <td>Re: Ambiente pruebas SINCO</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Sinco ERP</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>343</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>6826</td>
-            <td>Zócalos de la puerta de acceso y de la zona de niños de la sala</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>106</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>6872</td>
-            <td>el mueble donde recivimos las visitas en urbanity tiene una pata quebrada  lo evidencio en sala la joven lilibeth. las personas al sentarse se pueden accidentar.</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>100</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>6941</td>
-            <td>HUMEDAD EN COCINA Y BAÑO DE LA SALA DE VENTAS</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>97</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>6977</td>
-            <td>Botada de escombros</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>90</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>6971</td>
-            <td>TV SALA CON NOVEDAD</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>82</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7131</td>
-            <td>INCRUSTACIÓN DE PAPEL HIGIENICO BAÑO MODELO 68M2</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>75</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7323</td>
-            <td>SOLICITUD PUESTO DE TRABAJO</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>55</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Sinco ERP" data-agente="Angie Paola Olaya Martinez">
-            <td>7291</td>
-            <td>Ampliación de cantidad de variables en Sinco</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Sinco ERP</td>
-            <td>Angie Paola Olaya Martinez</td>
-            <td>55</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7485</td>
-            <td>Humeadad apartamento 103</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>42</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Sinco ERP" data-agente="Angie Paola Olaya Martinez">
-            <td>7482</td>
-            <td>Revisión en Sinco Compradores recurrentes</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Sinco ERP</td>
-            <td>Angie Paola Olaya Martinez</td>
-            <td>33</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7601</td>
-            <td>Cambio de celular</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>31</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7609</td>
-            <td>Sim Card-Vigias.</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>29</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7568</td>
-            <td>PROTECTOR TABLET MAESTRO PORTICO</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>28</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7516</td>
-            <td>Alarma Cuarto de herramienta</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>28</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7515</td>
-            <td>Solicitud Radios Valle Rosa</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>28</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Analitica" data-agente="Michael James James Roman Román Alzate">
-            <td>7627</td>
-            <td>PROBLEMAS CON LA INFORMACIÓN DASHBOARD ANTICIPOS Y RETENIDOS - CONSTRUCCIÓN</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Analitica</td>
-            <td>Michael James James Roman Román Alzate</td>
-            <td>27</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7623</td>
-            <td>Aviso de impresora.</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>27</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7622</td>
-            <td>Luces sala de negocios</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>27</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7577</td>
-            <td>REPARACIÓN DE RADIOS DE COMUNICACIÓN MARCA MOTOROLA</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>27</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7643</td>
-            <td>SOLICITUD COMPUTADOR TECLADO Y PANTALLAS TROPICO</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>26</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7634</td>
-            <td>Camaras salas de ventas</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>26</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7662</td>
-            <td>Mantenimiento accesorios de baño</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>25</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7652</td>
-            <td>MANTENIMIENTOS DE SILLAS.</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>25</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7608</td>
-            <td>Soporte para pantallas</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>25</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7675</td>
-            <td>PANAL EN MODELO DE 74M2</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>22</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7711</td>
-            <td>SOLICITUD IMPRESORA SALA DE VENTAS TROPICO</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>19</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7710</td>
-            <td>SOLICITUD TRASLADO DE LINEA</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>19</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7705</td>
-            <td>Suministro de aire acondicionado</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>19</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7701</td>
-            <td>SOLICITUD INSTALACIÓN DE NUEVA IMPRESORA EN CARTERA (CRÉDITOS)</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>19</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7691</td>
-            <td>SOLICITUD INVENTARIO PROYECTO TROPICO</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>19</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7738</td>
-            <td>Grabación ingreso de vigía: PUERTO CAPRI</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>18</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Yonathan Garcia Garcia">
-            <td>7737</td>
-            <td>CONFIGURACIÓN DE IMPRESORA</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Yonathan Garcia Garcia</td>
-            <td>18</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7730</td>
-            <td>PROGRAMACIÓN DE RADIOS Y REPARACION RADIO  HYTERA</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>18</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7728</td>
-            <td>TECHO DE SALIDA DE PUERTA TRASERA DE SALA DE VENTAS EN MAL ESTADO</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>18</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Yonathan Garcia Garcia">
-            <td>7718</td>
-            <td>reparación ups computador residente, receptor wifi</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Yonathan Garcia Garcia</td>
-            <td>18</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7617</td>
-            <td>MANTENIMIENTO RADIOS</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>18</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7759</td>
-            <td>Implementos equipo de computo</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>17</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Yonathan Garcia Garcia">
-            <td>7744</td>
-            <td>Impresora con fallas</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Yonathan Garcia Garcia</td>
-            <td>17</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7774</td>
-            <td>SOLICITUD HORNO MICROHONDAS</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>15</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7755</td>
-            <td>PROTECCION PARA LA TABLET DEL REGISTRO BIOMETRICO</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>15</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7777</td>
-            <td>Compra Radios</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>14</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7771</td>
-            <td>Vajilla sala de ventas</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>14</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7809</td>
-            <td>cámaras del malacate no tiene visual</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>13</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7808</td>
-            <td>INTERNET MODELO DEL LOTE</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>13</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7683</td>
-            <td>Compra de equipo</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>13</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7655</td>
-            <td>Solicitud</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>13</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7832</td>
-            <td>Desmonte sistema</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>12</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7818</td>
-            <td>Tablet para Easyface</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>12</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7756</td>
-            <td>ROTULACION PARQUEADEROS DISPONIBLES BIOCITY GRAND</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>11</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7669</td>
-            <td>RETIRO DE ALARMA - BODEGA POSVENTAS TURQUESA</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>11</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7848</td>
-            <td>ADECUACIÓN PANTALLA TV</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>10</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7840</td>
-            <td>CONECTIVIDAD PC DOMAT</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>10</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7788</td>
-            <td>Tablet sin datos</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>10</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7684</td>
-            <td>Solicitud Saneamiento de ontrack obra Entrebosques</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>8</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7820</td>
-            <td>cambo de simcard en tablet</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>7</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7697</td>
-            <td>Dispensador de agua e impresora</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>7</td>
-        </tr>
-        <tr class="fila-vencida" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7692</td>
-            <td>SOLICITUD DE MANTENIMIENTO DE RADIOS</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>7</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7859</td>
-            <td>Solicitud Portatil BIM</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>6</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7858</td>
-            <td>Vidrio Roto sala de Ventas</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>6</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7857</td>
-            <td>NUEVO CELULAR PARA SALA</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>6</td>
-        </tr>
-        <tr class="" data-grupo="Sinco ERP" data-agente="Angie Paola Olaya Martinez">
-            <td>7735</td>
-            <td>Solicitud espacio SINCO - Ecollect</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Sinco ERP</td>
-            <td>Angie Paola Olaya Martinez</td>
-            <td>6</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7873</td>
-            <td>Solicitud cámara y monitor para Malacate Portico Puerto Capri</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>5</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Julián David Alzate Muñoz">
-            <td>7847</td>
-            <td>Acceso a la unidad de red de Juan Esteban Marin</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Julián David Alzate Muñoz</td>
-            <td>5</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7838</td>
-            <td>Impresora sin funcionamiento</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>5</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Yonathan Garcia Garcia">
-            <td>7891</td>
-            <td>Problema con el rack del internet</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Yonathan Garcia Garcia</td>
-            <td>4</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7885</td>
-            <td>Cable camara extremadamente bajo</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>4</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7880</td>
-            <td>Revision de sistema de alarma y claves para equipo de trabajo</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>4</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7803</td>
-            <td>Solicitud tablets proyecto Entrebosques</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>4</td>
-        </tr>
-        <tr class="" data-grupo="Sinco ERP" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7904</td>
-            <td>SOLICITUD INCLUSIÓN PROYECTO TURQUESA EN SINCO</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Sinco ERP</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>3</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7895</td>
-            <td>ILUMINACION DEL MODELO DE 87M2 SEGUNDA ALCOBA.</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>3</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7894</td>
-            <td>CIERRE Y DESLIZAMIENTO PUERTAS VIDRIERAS BAMBU</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>3</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7893</td>
-            <td>RECOGIDA DE PUERTA METALICA</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>3</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7815</td>
-            <td>SOLICITUD MANTENIMIENTO IMPRESORAS - OBRA ENTREBOSQUES</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>3</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7811</td>
-            <td>Solicitud de revisión y reparación de novedades en la cocina de la sala de negocios de Rosa Campestre</td>
-            <td>Abierto</td>
-            <td>Baja</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>3</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7906</td>
-            <td>CORTO CIRCUITO EN COCINA SALA DE NEGOCIOS</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>2</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7903</td>
-            <td>Fallas en camaras</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>2</td>
-        </tr>
-        <tr class="" data-grupo="Sinco ERP" data-agente="Angie Paola Olaya Martinez">
-            <td>7900</td>
-            <td>Nuevos géneros (sexo) en documento de identidad</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Sinco ERP</td>
-            <td>Angie Paola Olaya Martinez</td>
-            <td>2</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Sin asignar">
-            <td>7923</td>
-            <td>Instalación Lightshot</td>
-            <td>Abierto</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Sin asignar</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Sinco ERP" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7922</td>
-            <td>ERROR EN ASIGNACION DE TRAMITES SINCO</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Sinco ERP</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7921</td>
-            <td>lavar fachada</td>
-            <td>Abierto</td>
-            <td>Media</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7920</td>
-            <td>Crear Usuarios</td>
-            <td>Abierto</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7919</td>
-            <td>Crear Usuarios David Cuartas</td>
-            <td>Abierto</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Sin asignar">
-            <td>7917</td>
-            <td>INGRESO EN ANALITYCO</td>
-            <td>Abierto</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Sin asignar</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Sin asignar">
-            <td>7916</td>
-            <td>Solicitud de revisión y calibración de monitores</td>
-            <td>Abierto</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Sin asignar</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7915</td>
-            <td>arreglo cama apartamento modelo de San Agustin</td>
-            <td>Abierto</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Yonathan Garcia Garcia">
-            <td>7914</td>
-            <td>ACCESO 3CX</td>
-            <td>Pendiente</td>
-            <td>Media</td>
-            <td>Servicios TI</td>
-            <td>Yonathan Garcia Garcia</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7913</td>
-            <td>Solicitud de cambio de monitor</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Sinco ERP" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7912</td>
-            <td>RV: Solicitud de Opcion de libros de NIIF</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Sinco ERP</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Sin asignar">
-            <td>7911</td>
-            <td>equipo vigía pide contraseñas</td>
-            <td>Abierto</td>
-            <td>Urgente</td>
-            <td>Servicios TI</td>
-            <td>Sin asignar</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7910</td>
-            <td>Internet en planta de concreto velvet</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7909</td>
-            <td>Acceso a google chrome</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios TI</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7908</td>
-            <td>AGUA PARA REGAR EL JARDIN DE BAMBU</td>
-            <td>Pendiente</td>
-            <td>Urgente</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7907</td>
-            <td>Aire de modelo de 82 artevera sin funcionamiento</td>
-            <td>Pendiente</td>
-            <td>Alta</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Sinco ERP" data-agente="Yonatan Ramirez Ramírez Rendón">
-            <td>7902</td>
-            <td>Solicitud de habilitación de la subserie de desistidos en CBR</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Sinco ERP</td>
-            <td>Yonatan Ramirez Ramírez Rendón</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios Administrativos" data-agente="Miguel Angel Aristizabal Alvarez">
-            <td>7896</td>
-            <td>TOPE PUERTA DE IMAN APARTAMENTOS MODELO DE BAMBU</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios Administrativos</td>
-            <td>Miguel Angel Aristizabal Alvarez</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7889</td>
-            <td>Solicitud de configuración de código de impresora para impresión</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7884</td>
-            <td>Solicitud impresora Valle Rosa</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7877</td>
-            <td>COMPRA DE LICENCIA AEC - GERENCIA DE CONSTRUCCIONES</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7870</td>
-            <td>CABLE PARA TABLE</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7849</td>
-            <td>RADIOS - TROPICO</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Analitica" data-agente="Michael James James Roman Román Alzate">
-            <td>7843</td>
-            <td>Permiso informe de control facturas</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Analitica</td>
-            <td>Michael James James Roman Román Alzate</td>
-            <td>0</td>
-        </tr>
-        <tr class="" data-grupo="Servicios TI" data-agente="Jhonatan Medina Medina Muñoz">
-            <td>7829</td>
-            <td>REPARACION RADIOS</td>
-            <td>Pendiente</td>
-            <td>Baja</td>
-            <td>Servicios TI</td>
-            <td>Jhonatan Medina Medina Muñoz</td>
-            <td>0</td>
-        </tr>
-        </tbody>
+        <tbody id="cuerpoTabla"></tbody>
     </table>
 </div>
 
 <footer>Generado automáticamente vía GitHub Actions · Constructora Capital Medellín</footer>
 
 <script>
+const TODOS_LOS_TICKETS = [{"id": 7923, "asunto": "Instalación Lightshot", "estado": "Abierto", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Sin asignar", "dias_vencido": 0, "vencido": false}, {"id": 7922, "asunto": "ERROR EN ASIGNACION DE TRAMITES SINCO", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Sinco ERP", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 0, "vencido": false}, {"id": 7921, "asunto": "lavar fachada", "estado": "Abierto", "prioridad": "Media", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 0, "vencido": false}, {"id": 7920, "asunto": "Crear Usuarios", "estado": "Abierto", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 0, "vencido": false}, {"id": 7919, "asunto": "Crear Usuarios David Cuartas", "estado": "Abierto", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 0, "vencido": false}, {"id": 7917, "asunto": "INGRESO EN ANALITYCO", "estado": "Abierto", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Sin asignar", "dias_vencido": 0, "vencido": false}, {"id": 7916, "asunto": "Solicitud de revisión y calibración de monitores", "estado": "Abierto", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Sin asignar", "dias_vencido": 0, "vencido": false}, {"id": 7915, "asunto": "arreglo cama apartamento modelo de San Agustin", "estado": "Abierto", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 0, "vencido": false}, {"id": 7914, "asunto": "ACCESO 3CX", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Yonathan Garcia Garcia", "dias_vencido": 0, "vencido": false}, {"id": 7913, "asunto": "Solicitud de cambio de monitor", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7912, "asunto": "RV: Solicitud de Opcion de libros de NIIF", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Sinco ERP", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 0, "vencido": false}, {"id": 7911, "asunto": "equipo vigía pide contraseñas", "estado": "Abierto", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Sin asignar", "dias_vencido": 0, "vencido": false}, {"id": 7910, "asunto": "Internet en planta de concreto velvet", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7909, "asunto": "Acceso a google chrome", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 0, "vencido": false}, {"id": 7908, "asunto": "AGUA PARA REGAR EL JARDIN DE BAMBU", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 0, "vencido": false}, {"id": 7907, "asunto": "Aire de modelo de 82 artevera sin funcionamiento", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 0, "vencido": false}, {"id": 7906, "asunto": "CORTO CIRCUITO EN COCINA SALA DE NEGOCIOS", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 2, "vencido": false}, {"id": 7904, "asunto": "SOLICITUD INCLUSIÓN PROYECTO TURQUESA EN SINCO", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Sinco ERP", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 3, "vencido": false}, {"id": 7903, "asunto": "Fallas en camaras", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 2, "vencido": false}, {"id": 7902, "asunto": "Solicitud de habilitación de la subserie de desistidos en CBR", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Sinco ERP", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 0, "vencido": false}, {"id": 7900, "asunto": "Nuevos géneros (sexo) en documento de identidad", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Sinco ERP", "agente": "Angie Paola Olaya Martinez", "dias_vencido": 2, "vencido": false}, {"id": 7896, "asunto": "TOPE PUERTA DE IMAN APARTAMENTOS MODELO DE BAMBU", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 0, "vencido": false}, {"id": 7895, "asunto": "ILUMINACION DEL MODELO DE 87M2 SEGUNDA ALCOBA.", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 3, "vencido": false}, {"id": 7894, "asunto": "CIERRE Y DESLIZAMIENTO PUERTAS VIDRIERAS BAMBU", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 3, "vencido": false}, {"id": 7893, "asunto": "RECOGIDA DE PUERTA METALICA", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 3, "vencido": false}, {"id": 7891, "asunto": "Problema con el rack del internet", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Yonathan Garcia Garcia", "dias_vencido": 4, "vencido": false}, {"id": 7889, "asunto": "Solicitud de configuración de código de impresora para impresión", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7885, "asunto": "Cable camara extremadamente bajo", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 4, "vencido": false}, {"id": 7884, "asunto": "Solicitud impresora Valle Rosa", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7880, "asunto": "Revision de sistema de alarma y claves para equipo de trabajo", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 4, "vencido": false}, {"id": 7877, "asunto": "COMPRA DE LICENCIA AEC - GERENCIA DE CONSTRUCCIONES", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7873, "asunto": "Solicitud cámara y monitor para Malacate Portico Puerto Capri", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 5, "vencido": false}, {"id": 7870, "asunto": "CABLE PARA TABLE", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7859, "asunto": "Solicitud Portatil BIM", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 6, "vencido": false}, {"id": 7858, "asunto": "Vidrio Roto sala de Ventas", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 6, "vencido": false}, {"id": 7857, "asunto": "NUEVO CELULAR PARA SALA", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 6, "vencido": false}, {"id": 7849, "asunto": "RADIOS - TROPICO", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7848, "asunto": "ADECUACIÓN PANTALLA TV", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 10, "vencido": true}, {"id": 7847, "asunto": "Acceso a la unidad de red de Juan Esteban Marin", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Julián David Alzate Muñoz", "dias_vencido": 5, "vencido": false}, {"id": 7843, "asunto": "Permiso informe de control facturas", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Analitica", "agente": "Michael James James Roman Román Alzate", "dias_vencido": 0, "vencido": false}, {"id": 7840, "asunto": "CONECTIVIDAD PC DOMAT", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 10, "vencido": true}, {"id": 7838, "asunto": "Impresora sin funcionamiento", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 5, "vencido": false}, {"id": 7832, "asunto": "Desmonte sistema", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 12, "vencido": true}, {"id": 7829, "asunto": "REPARACION RADIOS", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 0, "vencido": false}, {"id": 7820, "asunto": "cambo de simcard en tablet", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 7, "vencido": true}, {"id": 7818, "asunto": "Tablet para Easyface", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 12, "vencido": true}, {"id": 7815, "asunto": "SOLICITUD MANTENIMIENTO IMPRESORAS - OBRA ENTREBOSQUES", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 3, "vencido": false}, {"id": 7811, "asunto": "Solicitud de revisión y reparación de novedades en la cocina de la sala de negocios de Rosa Campestre", "estado": "Abierto", "prioridad": "Baja", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 3, "vencido": false}, {"id": 7809, "asunto": "cámaras del malacate no tiene visual", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 13, "vencido": true}, {"id": 7808, "asunto": "INTERNET MODELO DEL LOTE", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 13, "vencido": true}, {"id": 7803, "asunto": "Solicitud tablets proyecto Entrebosques", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 4, "vencido": false}, {"id": 7788, "asunto": "Tablet sin datos", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 10, "vencido": true}, {"id": 7777, "asunto": "Compra Radios", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 15, "vencido": true}, {"id": 7774, "asunto": "SOLICITUD HORNO MICROHONDAS", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 15, "vencido": true}, {"id": 7771, "asunto": "Vajilla sala de ventas", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 14, "vencido": true}, {"id": 7759, "asunto": "Implementos equipo de computo", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 17, "vencido": true}, {"id": 7756, "asunto": "ROTULACION PARQUEADEROS DISPONIBLES BIOCITY GRAND", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 11, "vencido": true}, {"id": 7755, "asunto": "PROTECCION PARA LA TABLET DEL REGISTRO BIOMETRICO", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 15, "vencido": true}, {"id": 7744, "asunto": "Impresora con fallas", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Yonathan Garcia Garcia", "dias_vencido": 17, "vencido": true}, {"id": 7738, "asunto": "Grabación ingreso de vigía: PUERTO CAPRI", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 18, "vencido": true}, {"id": 7737, "asunto": "CONFIGURACIÓN DE IMPRESORA", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Yonathan Garcia Garcia", "dias_vencido": 18, "vencido": true}, {"id": 7735, "asunto": "Solicitud espacio SINCO - Ecollect", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Sinco ERP", "agente": "Angie Paola Olaya Martinez", "dias_vencido": 6, "vencido": false}, {"id": 7730, "asunto": "PROGRAMACIÓN DE RADIOS Y REPARACION RADIO  HYTERA", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 18, "vencido": true}, {"id": 7728, "asunto": "TECHO DE SALIDA DE PUERTA TRASERA DE SALA DE VENTAS EN MAL ESTADO", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 18, "vencido": true}, {"id": 7718, "asunto": "reparación ups computador residente, receptor wifi", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Yonathan Garcia Garcia", "dias_vencido": 18, "vencido": true}, {"id": 7711, "asunto": "SOLICITUD IMPRESORA SALA DE VENTAS TROPICO", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 19, "vencido": true}, {"id": 7710, "asunto": "SOLICITUD TRASLADO DE LINEA", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 19, "vencido": true}, {"id": 7705, "asunto": "Suministro de aire acondicionado", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 19, "vencido": true}, {"id": 7701, "asunto": "SOLICITUD INSTALACIÓN DE NUEVA IMPRESORA EN CARTERA (CRÉDITOS)", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 19, "vencido": true}, {"id": 7697, "asunto": "Dispensador de agua e impresora", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 7, "vencido": true}, {"id": 7692, "asunto": "SOLICITUD DE MANTENIMIENTO DE RADIOS", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 7, "vencido": true}, {"id": 7691, "asunto": "SOLICITUD INVENTARIO PROYECTO TROPICO", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 19, "vencido": true}, {"id": 7684, "asunto": "Solicitud Saneamiento de ontrack obra Entrebosques", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 8, "vencido": true}, {"id": 7683, "asunto": "Compra de equipo", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 13, "vencido": true}, {"id": 7675, "asunto": "PANAL EN MODELO DE 74M2", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 22, "vencido": true}, {"id": 7669, "asunto": "RETIRO DE ALARMA - BODEGA POSVENTAS TURQUESA", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 11, "vencido": true}, {"id": 7662, "asunto": "Mantenimiento accesorios de baño", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 25, "vencido": true}, {"id": 7655, "asunto": "Solicitud", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 13, "vencido": true}, {"id": 7652, "asunto": "MANTENIMIENTOS DE SILLAS.", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 25, "vencido": true}, {"id": 7643, "asunto": "SOLICITUD COMPUTADOR TECLADO Y PANTALLAS TROPICO", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 26, "vencido": true}, {"id": 7634, "asunto": "Camaras salas de ventas", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 26, "vencido": true}, {"id": 7627, "asunto": "PROBLEMAS CON LA INFORMACIÓN DASHBOARD ANTICIPOS Y RETENIDOS - CONSTRUCCIÓN", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Analitica", "agente": "Michael James James Roman Román Alzate", "dias_vencido": 27, "vencido": true}, {"id": 7623, "asunto": "Aviso de impresora.", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 27, "vencido": true}, {"id": 7622, "asunto": "Luces sala de negocios", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 27, "vencido": true}, {"id": 7617, "asunto": "MANTENIMIENTO RADIOS", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 18, "vencido": true}, {"id": 7609, "asunto": "Sim Card-Vigias.", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 29, "vencido": true}, {"id": 7608, "asunto": "Soporte para pantallas", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 25, "vencido": true}, {"id": 7601, "asunto": "Cambio de celular", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 31, "vencido": true}, {"id": 7577, "asunto": "REPARACIÓN DE RADIOS DE COMUNICACIÓN MARCA MOTOROLA", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 27, "vencido": true}, {"id": 7568, "asunto": "PROTECTOR TABLET MAESTRO PORTICO", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 28, "vencido": true}, {"id": 7516, "asunto": "Alarma Cuarto de herramienta", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 28, "vencido": true}, {"id": 7515, "asunto": "Solicitud Radios Valle Rosa", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios TI", "agente": "Jhonatan Medina Medina Muñoz", "dias_vencido": 28, "vencido": true}, {"id": 7485, "asunto": "Humeadad apartamento 103", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 42, "vencido": true}, {"id": 7482, "asunto": "Revisión en Sinco Compradores recurrentes", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Sinco ERP", "agente": "Angie Paola Olaya Martinez", "dias_vencido": 33, "vencido": true}, {"id": 7323, "asunto": "SOLICITUD PUESTO DE TRABAJO", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 55, "vencido": true}, {"id": 7291, "asunto": "Ampliación de cantidad de variables en Sinco", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Sinco ERP", "agente": "Angie Paola Olaya Martinez", "dias_vencido": 55, "vencido": true}, {"id": 7131, "asunto": "INCRUSTACIÓN DE PAPEL HIGIENICO BAÑO MODELO 68M2", "estado": "Pendiente", "prioridad": "Alta", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 75, "vencido": true}, {"id": 6977, "asunto": "Botada de escombros", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 90, "vencido": true}, {"id": 6971, "asunto": "TV SALA CON NOVEDAD", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 82, "vencido": true}, {"id": 6941, "asunto": "HUMEDAD EN COCINA Y BAÑO DE LA SALA DE VENTAS", "estado": "Pendiente", "prioridad": "Urgente", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 97, "vencido": true}, {"id": 6872, "asunto": "el mueble donde recivimos las visitas en urbanity tiene una pata quebrada  lo evidencio en sala la joven lilibeth. las personas al sentarse se pueden accidentar.", "estado": "Pendiente", "prioridad": "Media", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 100, "vencido": true}, {"id": 6826, "asunto": "Zócalos de la puerta de acceso y de la zona de niños de la sala", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Servicios Administrativos", "agente": "Miguel Angel Aristizabal Alvarez", "dias_vencido": 106, "vencido": true}, {"id": 5090, "asunto": "Re: Ambiente pruebas SINCO", "estado": "Pendiente", "prioridad": "Baja", "grupo": "Sinco ERP", "agente": "Yonatan Ramirez Ramírez Rendón", "dias_vencido": 343, "vencido": true}];
 const colorTeal = '#0092B7';
 const colorNaranja = '#E67E22';
 const colorRojo = '#C0392B';
 const colorVerde = '#27AE60';
 
-new Chart(document.getElementById('chartGrupo'), {
-    type: 'bar',
-    data: { labels: ["Servicios TI", "Servicios Administrativos", "Sinco ERP", "Analitica"], datasets: [{ label: 'Tickets', data: [62, 30, 9, 2], backgroundColor: colorTeal }] },
-    options: { plugins: { legend: { display: false } }, responsive: true }
-});
-new Chart(document.getElementById('chartAgente'), {
-    type: 'bar',
-    data: { labels: ["Jhonatan Medina Medina Mu\u00f1oz", "Miguel Angel Aristizabal Alvarez", "Yonatan Ramirez Ram\u00edrez Rend\u00f3n", "Yonathan Garcia Garcia", "Sin asignar", "Angie Paola Olaya Martinez", "Michael James James Roman Rom\u00e1n Alzate", "Juli\u00e1n David Alzate Mu\u00f1oz"], datasets: [{ label: 'Tickets', data: [49, 30, 8, 5, 4, 4, 2, 1], backgroundColor: colorNaranja }] },
-    options: { plugins: { legend: { display: false } }, responsive: true }
-});
-new Chart(document.getElementById('chartPrioridad'), {
-    type: 'doughnut',
-    data: { labels: ["Baja", "Alta", "Urgente", "Media"], datasets: [{ data: [32, 31, 24, 16], backgroundColor: [colorVerde, colorTeal, colorNaranja, colorRojo] }] },
-    options: { responsive: true }
-});
+const estado = { grupo: null, agente: null, prioridad: null };
+let chartGrupo, chartAgente, chartPrioridad;
 
-function aplicarFiltros() {
-    const grupo = document.getElementById('filtroGrupo').value;
-    const agente = document.getElementById('filtroAgente').value;
-    const filas = document.querySelectorAll('#tablaTickets tbody tr');
-    let visibles = 0;
-    filas.forEach(fila => {
-        const coincideGrupo = !grupo || fila.dataset.grupo === grupo;
-        const coincideAgente = !agente || fila.dataset.agente === agente;
-        if (coincideGrupo && coincideAgente) {
-            fila.classList.remove('oculto');
-            visibles++;
-        } else {
-            fila.classList.add('oculto');
-        }
+function poblarSelect(id, valores) {
+    const select = document.getElementById(id);
+    valores.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        select.appendChild(opt);
     });
-    document.getElementById('contador').innerText = `Mostrando ${visibles} de ${filas.length} tickets`;
 }
 
-document.getElementById('filtroGrupo').addEventListener('change', aplicarFiltros);
-document.getElementById('filtroAgente').addEventListener('change', aplicarFiltros);
-aplicarFiltros();
+function contar(lista, campo) {
+    const conteo = {};
+    lista.forEach(t => { conteo[t[campo]] = (conteo[t[campo]] || 0) + 1; });
+    return conteo;
+}
+
+function ticketsFiltrados() {
+    return TODOS_LOS_TICKETS.filter(t =>
+        (!estado.grupo || t.grupo === estado.grupo) &&
+        (!estado.agente || t.agente === estado.agente) &&
+        (!estado.prioridad || t.prioridad === estado.prioridad)
+    );
+}
+
+function renderTabla(lista) {
+    const cuerpo = document.getElementById('cuerpoTabla');
+    cuerpo.innerHTML = '';
+    const ordenados = [...lista].sort((a, b) => b.dias_vencido - a.dias_vencido);
+    ordenados.forEach(t => {
+        const tr = document.createElement('tr');
+        if (t.vencido) tr.classList.add('fila-vencida');
+        tr.innerHTML = `<td>${t.id}</td><td>${t.asunto}</td><td>${t.estado}</td><td>${t.prioridad}</td><td>${t.grupo}</td><td>${t.agente}</td><td>${t.dias_vencido}</td>`;
+        cuerpo.appendChild(tr);
+    });
+}
+
+function renderKPIs(lista) {
+    const total = lista.length;
+    const vencidos = lista.filter(t => t.vencido).length;
+    const pct = total ? ((vencidos / total) * 100).toFixed(1) : 0;
+    document.getElementById('kpiTotal').innerText = total;
+    document.getElementById('kpiVencidos').innerText = vencidos;
+    document.getElementById('kpiPorcentaje').innerText = pct + '%';
+}
+
+function actualizarEtiquetasFiltro() {
+    const partes = [];
+    if (estado.grupo) partes.push('Categoría: ' + estado.grupo);
+    if (estado.agente) partes.push('Técnico: ' + estado.agente);
+    if (estado.prioridad) partes.push('Prioridad: ' + estado.prioridad);
+    const contador = document.getElementById('contador');
+    const total = ticketsFiltrados().length;
+    contador.innerHTML = (partes.length ? partes.join(' · ') + ' — ' : '') + `Mostrando ${total} de ${TODOS_LOS_TICKETS.length} tickets`;
+}
+
+function crearOActualizarChart(chartRef, canvasId, tipo, labels, data, colores, campoFiltro) {
+    if (chartRef) chartRef.destroy();
+    const ctx = document.getElementById(canvasId);
+    const nuevo = new Chart(ctx, {
+        type: tipo,
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colores, label: 'Tickets' }] },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: tipo === 'doughnut' } },
+            onClick: (evt, elementos) => {
+                if (!elementos.length) return;
+                const idx = elementos[0].index;
+                const valor = labels[idx];
+                if (estado[campoFiltro] === valor) {
+                    estado[campoFiltro] = null;
+                } else {
+                    estado[campoFiltro] = valor;
+                }
+                sincronizarSelects();
+                render();
+            }
+        }
+    });
+    return nuevo;
+}
+
+function sincronizarSelects() {
+    document.getElementById('filtroGrupo').value = estado.grupo || '';
+    document.getElementById('filtroAgente').value = estado.agente || '';
+    document.getElementById('filtroPrioridad').value = estado.prioridad || '';
+}
+
+function render() {
+    const filtrados = ticketsFiltrados();
+    renderKPIs(filtrados);
+    renderTabla(filtrados);
+    actualizarEtiquetasFiltro();
+
+    const porGrupo = contar(filtrados, 'grupo');
+    chartGrupo = crearOActualizarChart(chartGrupo, 'chartGrupo', 'bar',
+        Object.keys(porGrupo), Object.values(porGrupo), colorTeal, 'grupo');
+
+    const porAgente = contar(filtrados, 'agente');
+    chartAgente = crearOActualizarChart(chartAgente, 'chartAgente', 'bar',
+        Object.keys(porAgente), Object.values(porAgente), colorNaranja, 'agente');
+
+    const porPrioridad = contar(filtrados, 'prioridad');
+    chartPrioridad = crearOActualizarChart(chartPrioridad, 'chartPrioridad', 'doughnut',
+        Object.keys(porPrioridad), Object.values(porPrioridad),
+        [colorVerde, colorTeal, colorNaranja, colorRojo], 'prioridad');
+}
+
+// Poblar selects con valores únicos (sobre el total, no sobre el filtrado)
+poblarSelect('filtroGrupo', [...new Set(TODOS_LOS_TICKETS.map(t => t.grupo))].sort());
+poblarSelect('filtroAgente', [...new Set(TODOS_LOS_TICKETS.map(t => t.agente))].sort());
+poblarSelect('filtroPrioridad', [...new Set(TODOS_LOS_TICKETS.map(t => t.prioridad))].sort());
+
+document.getElementById('filtroGrupo').addEventListener('change', e => { estado.grupo = e.target.value || null; render(); });
+document.getElementById('filtroAgente').addEventListener('change', e => { estado.agente = e.target.value || null; render(); });
+document.getElementById('filtroPrioridad').addEventListener('change', e => { estado.prioridad = e.target.value || null; render(); });
+document.getElementById('btnLimpiar').addEventListener('click', () => {
+    estado.grupo = null; estado.agente = null; estado.prioridad = null;
+    sincronizarSelects(); render();
+});
+
+render();
 </script>
 
 </body>
