@@ -40,11 +40,11 @@ def validar_credenciales():
 
 
 def obtener_paginado(endpoint, campo_lista):
-    """Trae todas las páginas de un endpoint de Freshservice."""
+    """Trae todas las páginas de un endpoint de Freshdesk."""
     resultados = []
     page = 1
     while True:
-        url = f"https://{DOMINIO}.freshservice.com/api/v2/{endpoint}"
+        url = f"https://{DOMINIO}.freshdesk.com/api/v2/{endpoint}"
         params = {"per_page": 100, "page": page}
         resp = requests.get(url, params=params, auth=(API_KEY, "X"), timeout=30)
         if resp.status_code != 200:
