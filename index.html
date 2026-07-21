@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte Mesa de Ayuda TI - Constructora Capital</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    :root {
+        --teal: #0092B7;
+        --teal-oscuro: #00839C;
+        --carbon: #1D1D1B;
+        --rojo: #C0392B;
+        --verde: #27AE60;
+        --naranja: #E67E22;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #F4F6F7;
+        color: var(--carbon);
+        padding: 24px;
+    }
+    header {
+        background: linear-gradient(135deg, var(--teal-oscuro), var(--teal));
+        color: white;
+        padding: 28px 32px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    header h1 { font-size: 24px; margin-bottom: 6px; }
+    header p { opacity: 0.9; font-size: 13px; }
+    .kpis {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-left: 5px solid var(--teal);
+    }
+    .kpi-card.alerta { border-left-color: var(--rojo); }
+    .kpi-card .valor { font-size: 32px; font-weight: 700; color: var(--carbon); }
+    .kpi-card .etiqueta { font-size: 13px; color: #666; margin-top: 4px; }
+    .charts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .chart-box {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .chart-box h3 { font-size: 15px; margin-bottom: 12px; color: var(--teal-oscuro); }
+    .tabla-box {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+        background: var(--carbon);
+        color: white;
+        text-align: left;
+        padding: 10px 12px;
+        position: sticky; top: 0;
+    }
+    td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .fila-vencida { background: #FDEDEC; }
+    .fila-vencida td:last-child { color: var(--rojo); font-weight: 700; }
+    footer { text-align: center; color: #999; font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Reporte Mesa de Ayuda TI — Constructora Capital Medellín</h1>
+    <p>Actualizado automáticamente · Última actualización: 21/07/2026 17:50</p>
+</header>
+
+<div class="kpis">
+    <div class="kpi-card">
+        <div class="valor">4</div>
+        <div class="etiqueta">Tickets abiertos / pendientes</div>
+    </div>
+    <div class="kpi-card alerta">
+        <div class="valor">0</div>
+        <div class="etiqueta">Tickets vencidos (7+ días)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="valor">0.0%</div>
+        <div class="etiqueta">Porcentaje de vencidos</div>
+    </div>
+</div>
+
+<div class="charts">
+    <div class="chart-box">
+        <h3>Tickets por categoría</h3>
+        <canvas id="chartGrupo"></canvas>
+    </div>
+    <div class="chart-box">
+        <h3>Tickets por técnico</h3>
+        <canvas id="chartAgente"></canvas>
+    </div>
+    <div class="chart-box">
+        <h3>Tickets por prioridad</h3>
+        <canvas id="chartPrioridad"></canvas>
+    </div>
+</div>
+
+<div class="tabla-box">
+    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Detalle de tickets (ordenados por días vencido)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th><th>Asunto</th><th>Estado</th><th>Prioridad</th>
+                <th>Categoría</th><th>Técnico</th><th>Días vencido</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+        <tr class="">
+            <td>7923</td>
+            <td>Instalación Lightshot</td>
+            <td>Abierto</td>
+            <td>Baja</td>
+            <td>Servicios TI</td>
+            <td>Sin asignar</td>
+            <td>0</td>
+        </tr>
+        <tr class="">
+            <td>7917</td>
+            <td>INGRESO EN ANALITYCO</td>
+            <td>Abierto</td>
+            <td>Urgente</td>
+            <td>Servicios TI</td>
+            <td>Sin asignar</td>
+            <td>0</td>
+        </tr>
+        <tr class="">
+            <td>7916</td>
+            <td>Solicitud de revisión y calibración de monitores</td>
+            <td>Abierto</td>
+            <td>Baja</td>
+            <td>Servicios TI</td>
+            <td>Sin asignar</td>
+            <td>0</td>
+        </tr>
+        <tr class="">
+            <td>7911</td>
+            <td>equipo vigía pide contraseñas</td>
+            <td>Abierto</td>
+            <td>Urgente</td>
+            <td>Servicios TI</td>
+            <td>Sin asignar</td>
+            <td>0</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<footer>Generado automáticamente vía GitHub Actions · Constructora Capital Medellín</footer>
+
+<script>
+const colorTeal = '#0092B7';
+const colorNaranja = '#E67E22';
+const colorRojo = '#C0392B';
+const colorVerde = '#27AE60';
+const colorCarbon = '#1D1D1B';
+
+new Chart(document.getElementById('chartGrupo'), {
+    type: 'bar',
+    data: {
+        labels: ["Servicios TI"],
+        datasets: [{ label: 'Tickets', data: [4], backgroundColor: colorTeal }]
+    },
+    options: { plugins: { legend: { display: false } }, responsive: true }
+});
+
+new Chart(document.getElementById('chartAgente'), {
+    type: 'bar',
+    data: {
+        labels: ["Sin asignar"],
+        datasets: [{ label: 'Tickets', data: [4], backgroundColor: colorNaranja }]
+    },
+    options: { plugins: { legend: { display: false } }, responsive: true }
+});
+
+new Chart(document.getElementById('chartPrioridad'), {
+    type: 'doughnut',
+    data: {
+        labels: ["Baja", "Urgente"],
+        datasets: [{ data: [2, 2], backgroundColor: [colorVerde, colorTeal, colorNaranja, colorRojo] }]
+    },
+    options: { responsive: true }
+});
+</script>
+
+</body>
+</html>
