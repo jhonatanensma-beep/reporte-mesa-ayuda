@@ -1,12 +1,6 @@
 """
-Reporte automático de Mesa de Ayuda TI - Freshservice
+Reporte automático de Mesa de Ayuda TI - Freshdesk
 Constructora Capital Medellín
-
-Este script se conecta a la API de Freshservice, trae los tickets,
-calcula métricas (vencidos, por categoría, por técnico) y genera
-un archivo index.html con un dashboard visual.
-
-Se ejecuta automáticamente todos los días vía GitHub Actions.
 """
 
 import os
@@ -34,36 +28,41 @@ PRIORIDADES = {1: "Baja", 2: "Media", 3: "Alta", 4: "Urgente"}
 
 def validar_credenciales():
     if not DOMINIO or not API_KEY:
-        print("ERROR: Faltan FRESHSERVICE_DOMAIN o FRESHSERVICE_API_KEY "
-              "como variables de entorno / GitHub Secrets.")
+        print("ERROR: Faltan FRESHSERVICE_DOMAIN o FRESHSERVICE_API_KEY.")
         sys.exit(1)
 
 
 def obtener_paginado(endpoint, campo_lista):
-    """Trae todas las páginas de un endpoint de Freshdesk."""
     resultados = []
     page = 1
     while True:
         url = f"https://{DOMINIO}.freshdesk.com/api/v2/{endpoint}"
-        params = {"per_page": 100, "page": page}
-        resp = requests.get(url, params=params, auth=(API_KEY, "X"), timeout=30)
+        separador = "&" if "?" in url else "?"
+        url_final = f"{url}{separador}per_page=100&page={page}"
+        resp = requests.get(url_final, auth=(API_KEY, "X"), timeout=30)
         if resp.status_code != 200:
             print(f"Error consultando {endpoint}: {resp.status_code} {resp.text}")
             sys.exit(1)
         data = resp.json()
-        # Freshdesk devuelve una lista directamente, no un diccionario
         lote = data if isinstance(data, list) else data.get(campo_lista, [])
         resultados.extend(lote)
         if len(lote) < 100:
             break
         page += 1
-        if page > 50:  # freno de seguridad
+        if page > 50:
             break
     return resultados
 
 
 def obtener_tickets():
-    return obtener_paginado("tickets?filter=new_and_my_open", "tickets")
+    # Sin filtro -> trae TODOS los tickets (cualquier agente, cualquier grupo).
+    # updated_since muy antiguo para traer el historial completo, no solo 30 días.
+    tickets = obtener_paginado(
+        "tickets?updated_since=2015-01-01T00:00:00Z&order_by=created_at&order_type=desc",
+        "tickets"
+    )
+    # Nos quedamos solo con Abiertos (2) y Pendientes (3)
+    return [t for t in tickets if t.get("status") in (2, 3)]
 
 
 def obtener_agentes():
@@ -89,6 +88,14 @@ def dias_vencido(due_by):
     return (ahora - fecha_limite).days
 
 
+def estado_texto(codigo):
+    return ESTADOS.get(codigo, "Desconocido")
+
+
+def prioridad_texto(p):
+    return PRIORIDADES.get(p, "N/A")
+
+
 def procesar_tickets(tickets, agentes, grupos):
     filas = []
     for t in tickets:
@@ -96,8 +103,8 @@ def procesar_tickets(tickets, agentes, grupos):
         filas.append({
             "id": t["id"],
             "asunto": t.get("subject", "(sin asunto)"),
-            "estado": ESTADOS.get(t.get("status"), "Desconocido"),
-            "prioridad": PRIORIDADES.get(t.get("priority"), "N/A"),
+            "estado": estado_texto(t.get("status")),
+            "prioridad": prioridad_texto(t.get("priority")),
             "grupo": grupos.get(t.get("group_id"), "Sin grupo"),
             "agente": agentes.get(t.get("responder_id"), "Sin asignar"),
             "creado": t.get("created_at"),
@@ -112,11 +119,9 @@ def calcular_metricas(filas):
     total = len(filas)
     vencidos = sum(1 for f in filas if f["vencido"])
     porcentaje = round((vencidos / total * 100), 1) if total else 0
-
     por_grupo = Counter(f["grupo"] for f in filas)
     por_agente = Counter(f["agente"] for f in filas)
     por_prioridad = Counter(f["prioridad"] for f in filas)
-
     return {
         "total": total,
         "vencidos": vencidos,
@@ -131,11 +136,17 @@ def generar_html(filas, metricas):
     ahora = datetime.now().strftime("%d/%m/%Y %H:%M")
     filas_ordenadas = sorted(filas, key=lambda f: f["dias_vencido"], reverse=True)
 
+    grupos_unicos = sorted(set(f["grupo"] for f in filas))
+    agentes_unicos = sorted(set(f["agente"] for f in filas))
+
+    opciones_grupo = "".join(f'<option value="{g}">{g}</option>' for g in grupos_unicos)
+    opciones_agente = "".join(f'<option value="{a}">{a}</option>' for a in agentes_unicos)
+
     filas_tabla = ""
     for f in filas_ordenadas:
         clase = "fila-vencida" if f["vencido"] else ""
         filas_tabla += f"""
-        <tr class="{clase}">
+        <tr class="{clase}" data-grupo="{f['grupo']}" data-agente="{f['agente']}">
             <td>{f['id']}</td>
             <td>{f['asunto']}</td>
             <td>{f['estado']}</td>
@@ -169,77 +180,46 @@ def generar_html(filas, metricas):
         --naranja: {COLOR_NARANJA};
     }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{
-        font-family: 'Segoe UI', Arial, sans-serif;
-        background: #F4F6F7;
-        color: var(--carbon);
-        padding: 24px;
-    }}
+    body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #F4F6F7; color: var(--carbon); padding: 24px; }}
     header {{
         background: linear-gradient(135deg, var(--teal-oscuro), var(--teal));
-        color: white;
-        padding: 28px 32px;
-        border-radius: 12px;
-        margin-bottom: 24px;
+        color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 24px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        display: flex; align-items: center; gap: 20px;
     }}
-    header h1 {{ font-size: 24px; margin-bottom: 6px; }}
-    header p {{ opacity: 0.9; font-size: 13px; }}
-    .kpis {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-    }}
-    .kpi-card {{
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border-left: 5px solid var(--teal);
-    }}
+    header img {{ height: 60px; background: white; border-radius: 8px; padding: 6px; }}
+    header .titulos h1 {{ font-size: 22px; margin-bottom: 4px; }}
+    header .titulos p {{ opacity: 0.9; font-size: 13px; }}
+    .kpis {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }}
+    .kpi-card {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid var(--teal); }}
     .kpi-card.alerta {{ border-left-color: var(--rojo); }}
-    .kpi-card .valor {{ font-size: 32px; font-weight: 700; color: var(--carbon); }}
+    .kpi-card .valor {{ font-size: 32px; font-weight: 700; }}
     .kpi-card .etiqueta {{ font-size: 13px; color: #666; margin-top: 4px; }}
-    .charts {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-    }}
-    .chart-box {{
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }}
+    .charts {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }}
+    .chart-box {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
     .chart-box h3 {{ font-size: 15px; margin-bottom: 12px; color: var(--teal-oscuro); }}
-    .tabla-box {{
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        overflow-x: auto;
-    }}
+    .filtros {{ background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }}
+    .filtros label {{ font-size: 13px; font-weight: 600; color: var(--teal-oscuro); margin-right: 6px; }}
+    .filtros select {{ padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }}
+    .filtros .contador {{ margin-left: auto; font-size: 13px; color: #666; }}
+    .tabla-box {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-    th {{
-        background: var(--carbon);
-        color: white;
-        text-align: left;
-        padding: 10px 12px;
-        position: sticky; top: 0;
-    }}
+    th {{ background: var(--carbon); color: white; text-align: left; padding: 10px 12px; position: sticky; top: 0; cursor: pointer; }}
     td {{ padding: 8px 12px; border-bottom: 1px solid #eee; }}
     .fila-vencida {{ background: #FDEDEC; }}
     .fila-vencida td:last-child {{ color: var(--rojo); font-weight: 700; }}
+    .oculto {{ display: none; }}
     footer {{ text-align: center; color: #999; font-size: 12px; margin-top: 24px; }}
 </style>
 </head>
 <body>
 
 <header>
-    <h1>Reporte Mesa de Ayuda TI — Constructora Capital Medellín</h1>
-    <p>Actualizado automáticamente · Última actualización: {ahora}</p>
+    <img src="logo.png" alt="Constructora Capital" onerror="this.style.display='none'">
+    <div class="titulos">
+        <h1>Reporte Mesa de Ayuda TI</h1>
+        <p>Constructora Capital Medellín · Actualizado automáticamente · Última actualización: {ahora}</p>
+    </div>
 </header>
 
 <div class="kpis">
@@ -258,28 +238,34 @@ def generar_html(filas, metricas):
 </div>
 
 <div class="charts">
-    <div class="chart-box">
-        <h3>Tickets por categoría</h3>
-        <canvas id="chartGrupo"></canvas>
+    <div class="chart-box"><h3>Tickets por categoría</h3><canvas id="chartGrupo"></canvas></div>
+    <div class="chart-box"><h3>Tickets por técnico</h3><canvas id="chartAgente"></canvas></div>
+    <div class="chart-box"><h3>Tickets por prioridad</h3><canvas id="chartPrioridad"></canvas></div>
+</div>
+
+<div class="filtros">
+    <div>
+        <label>Categoría</label>
+        <select id="filtroGrupo">
+            <option value="">Todas</option>
+            {opciones_grupo}
+        </select>
     </div>
-    <div class="chart-box">
-        <h3>Tickets por técnico</h3>
-        <canvas id="chartAgente"></canvas>
+    <div>
+        <label>Técnico</label>
+        <select id="filtroAgente">
+            <option value="">Todos</option>
+            {opciones_agente}
+        </select>
     </div>
-    <div class="chart-box">
-        <h3>Tickets por prioridad</h3>
-        <canvas id="chartPrioridad"></canvas>
-    </div>
+    <div class="contador" id="contador"></div>
 </div>
 
 <div class="tabla-box">
-    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Detalle de tickets (ordenados por días vencido)</h3>
-    <table>
+    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Detalle de tickets</h3>
+    <table id="tablaTickets">
         <thead>
-            <tr>
-                <th>ID</th><th>Asunto</th><th>Estado</th><th>Prioridad</th>
-                <th>Categoría</th><th>Técnico</th><th>Días vencido</th>
-            </tr>
+            <tr><th>ID</th><th>Asunto</th><th>Estado</th><th>Prioridad</th><th>Categoría</th><th>Técnico</th><th>Días vencido</th></tr>
         </thead>
         <tbody>
             {filas_tabla}
@@ -294,34 +280,44 @@ const colorTeal = '{COLOR_TEAL}';
 const colorNaranja = '{COLOR_NARANJA}';
 const colorRojo = '{COLOR_ROJO}';
 const colorVerde = '{COLOR_VERDE}';
-const colorCarbon = '{COLOR_CARBON}';
 
 new Chart(document.getElementById('chartGrupo'), {{
     type: 'bar',
-    data: {{
-        labels: {labels_grupo},
-        datasets: [{{ label: 'Tickets', data: {data_grupo}, backgroundColor: colorTeal }}]
-    }},
+    data: {{ labels: {labels_grupo}, datasets: [{{ label: 'Tickets', data: {data_grupo}, backgroundColor: colorTeal }}] }},
     options: {{ plugins: {{ legend: {{ display: false }} }}, responsive: true }}
 }});
-
 new Chart(document.getElementById('chartAgente'), {{
     type: 'bar',
-    data: {{
-        labels: {labels_agente},
-        datasets: [{{ label: 'Tickets', data: {data_agente}, backgroundColor: colorNaranja }}]
-    }},
+    data: {{ labels: {labels_agente}, datasets: [{{ label: 'Tickets', data: {data_agente}, backgroundColor: colorNaranja }}] }},
     options: {{ plugins: {{ legend: {{ display: false }} }}, responsive: true }}
 }});
-
 new Chart(document.getElementById('chartPrioridad'), {{
     type: 'doughnut',
-    data: {{
-        labels: {labels_prioridad},
-        datasets: [{{ data: {data_prioridad}, backgroundColor: [colorVerde, colorTeal, colorNaranja, colorRojo] }}]
-    }},
+    data: {{ labels: {labels_prioridad}, datasets: [{{ data: {data_prioridad}, backgroundColor: [colorVerde, colorTeal, colorNaranja, colorRojo] }}] }},
     options: {{ responsive: true }}
 }});
+
+function aplicarFiltros() {{
+    const grupo = document.getElementById('filtroGrupo').value;
+    const agente = document.getElementById('filtroAgente').value;
+    const filas = document.querySelectorAll('#tablaTickets tbody tr');
+    let visibles = 0;
+    filas.forEach(fila => {{
+        const coincideGrupo = !grupo || fila.dataset.grupo === grupo;
+        const coincideAgente = !agente || fila.dataset.agente === agente;
+        if (coincideGrupo && coincideAgente) {{
+            fila.classList.remove('oculto');
+            visibles++;
+        }} else {{
+            fila.classList.add('oculto');
+        }}
+    }});
+    document.getElementById('contador').innerText = `Mostrando ${{visibles}} de ${{filas.length}} tickets`;
+}}
+
+document.getElementById('filtroGrupo').addEventListener('change', aplicarFiltros);
+document.getElementById('filtroAgente').addEventListener('change', aplicarFiltros);
+aplicarFiltros();
 </script>
 
 </body>
@@ -331,20 +327,16 @@ new Chart(document.getElementById('chartPrioridad'), {{
 
 def main():
     validar_credenciales()
-    print("Conectando a Freshservice...")
+    print("Conectando a Freshdesk...")
     tickets = obtener_tickets()
     agentes = obtener_agentes()
     grupos = obtener_grupos()
-
     print(f"Tickets encontrados: {len(tickets)}")
     filas = procesar_tickets(tickets, agentes, grupos)
     metricas = calcular_metricas(filas)
-
     html = generar_html(filas, metricas)
-
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
-
     print("index.html generado correctamente.")
     print(f"Total: {metricas['total']} | Vencidos: {metricas['vencidos']}")
 
