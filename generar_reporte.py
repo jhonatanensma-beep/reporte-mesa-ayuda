@@ -51,7 +51,8 @@ def obtener_paginado(endpoint, campo_lista):
             print(f"Error consultando {endpoint}: {resp.status_code} {resp.text}")
             sys.exit(1)
         data = resp.json()
-        lote = data.get(campo_lista, [])
+        # Freshdesk devuelve una lista directamente, no un diccionario
+        lote = data if isinstance(data, list) else data.get(campo_lista, [])
         resultados.extend(lote)
         if len(lote) < 100:
             break
