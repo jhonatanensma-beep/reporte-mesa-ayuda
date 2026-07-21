@@ -68,7 +68,12 @@ def obtener_tickets():
 
 def obtener_agentes():
     agentes = obtener_paginado("agents", "agents")
-    return {a["id"]: f"{a['first_name']} {a['last_name']}".strip() for a in agentes}
+    mapa = {}
+    for a in agentes:
+        contacto = a.get("contact") or {}
+        nombre = contacto.get("name") or contacto.get("email") or f"Agente {a.get('id')}"
+        mapa[a["id"]] = nombre
+    return mapa
 
 
 def obtener_grupos():
