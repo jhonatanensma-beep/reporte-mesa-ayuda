@@ -6,6 +6,7 @@ Constructora Capital Medellín
 import os
 import sys
 import json
+import time
 from datetime import datetime, timezone
 from collections import Counter
 import requests
@@ -32,6 +33,8 @@ def validar_credenciales():
         sys.exit(1)
 
 
+import time  # agrega este import junto a los otros, arriba del archivo
+
 def obtener_paginado(endpoint, campo_lista):
     resultados = []
     page = 1
@@ -39,16 +42,33 @@ def obtener_paginado(endpoint, campo_lista):
         url = f"https://{DOMINIO}.freshdesk.com/api/v2/{endpoint}"
         separador = "&" if "?" in url else "?"
         url_final = f"{url}{separador}per_page=100&page={page}"
-        resp = requests.get(url_final, auth=(API_KEY, "X"), timeout=30)
+
+        intentos = 0
+        while True:
+            resp = requests.get(url_final, auth=(API_KEY, "X"), timeout=30)
+            if resp.status_code == 429:
+                # Freshdesk nos dice cuántos segundos esperar
+                espera = int(resp.headers.get("Retry-After", 10))
+                print(f"Límite de peticiones alcanzado, esperando {espera}s...")
+                time.sleep(espera + 1)
+                intentos += 1
+                if intentos > 5:
+                    print("Demasiados reintentos por límite de peticiones.")
+                    sys.exit(1)
+                continue
+            break
+
         if resp.status_code != 200:
             print(f"Error consultando {endpoint}: {resp.status_code} {resp.text}")
             sys.exit(1)
+
         data = resp.json()
         lote = data if isinstance(data, list) else data.get(campo_lista, [])
         resultados.extend(lote)
         if len(lote) < 100:
             break
         page += 1
+        time.sleep(1)  # pequeña pausa entre páginas para no saturar la API
         if page > 50:
             break
     return resultados
