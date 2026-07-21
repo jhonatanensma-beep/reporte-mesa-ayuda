@@ -310,11 +310,7 @@ def generar_html(filas, historial, resumen):
 </div>
 
 <div class="charts">
-    <div class="chart-box ancho">
-        <h3>Tendencia — Total vs. Vencidos en el tiempo</h3>
-        <div class="ayuda">Se va llenando con cada actualización automática diaria</div>
-        <canvas id="chartTendencia"></canvas>
-    </div>
+  
     <div class="chart-box"><h3>Tickets por categoría</h3><div class="ayuda">Clic para filtrar</div><canvas id="chartGrupo"></canvas></div>
     <div class="chart-box"><h3>Tickets por técnico</h3><div class="ayuda">Clic para filtrar</div><canvas id="chartAgente"></canvas></div>
     <div class="chart-box"><h3>Antigüedad del backlog</h3><div class="ayuda">Clic para filtrar</div><canvas id="chartAntiguedad"></canvas></div>
@@ -433,18 +429,6 @@ function render() {{
     chartAntiguedad = crearChart(chartAntiguedad, 'chartAntiguedad', 'bar', labelsAnt, labelsAnt.map(l => pAnt[l]), colorNaranja, 'antiguedad');
 }}
 
-// Gráfica de tendencia (no se filtra, es histórico general)
-new Chart(document.getElementById('chartTendencia'), {{
-    type: 'line',
-    data: {{
-        labels: HISTORIAL.map(h => h.fecha),
-        datasets: [
-            {{ label: 'Total abiertos', data: HISTORIAL.map(h => h.total), borderColor: colorTeal, backgroundColor: colorTeal, tension: 0.3 }},
-            {{ label: 'Vencidos', data: HISTORIAL.map(h => h.vencidos), borderColor: colorRojo, backgroundColor: colorRojo, tension: 0.3 }}
-        ]
-    }},
-    options: {{ responsive: true, plugins: {{ legend: {{ display: true }} }} }}
-}});
 
 poblarSelect('filtroGrupo', [...new Set(TODOS_LOS_TICKETS.map(t => t.grupo))].sort());
 poblarSelect('filtroAgente', [...new Set(TODOS_LOS_TICKETS.map(t => t.agente))].sort());
