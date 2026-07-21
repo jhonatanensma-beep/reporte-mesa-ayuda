@@ -208,7 +208,7 @@ def generar_html(filas, historial, resumen):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reporte Mesa de Ayuda TI - Constructora Capital</title>
+<title>Reporte Mesa de Servicios - Constructora Capital Medellín</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
     :root {{
@@ -284,7 +284,7 @@ def generar_html(filas, historial, resumen):
 <header>
     <img src="logo.png" alt="Constructora Capital" onerror="this.style.display='none'">
     <div class="titulos">
-        <h1>Reporte Mesa de Ayuda TI</h1>
+        <h1>Reporte Mesa de Servicios</h1>
         <p>Constructora Capital Medellín · Actualizado automáticamente · Última actualización: {ahora}</p>
     </div>
 </header>
