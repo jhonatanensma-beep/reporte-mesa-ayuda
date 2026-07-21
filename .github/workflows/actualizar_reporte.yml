@@ -1,0 +1,39 @@
+name: Actualizar Reporte Freshservice
+
+on:
+  schedule:
+    # Corre todos los días a las 12:00 UTC = 7:00 a.m. hora Colombia
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}   # permite correrlo manualmente desde GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Generar reporte
+        env:
+          FRESHSERVICE_DOMAIN: ${{ secrets.FRESHSERVICE_DOMAIN }}
+          FRESHSERVICE_API_KEY: ${{ secrets.FRESHSERVICE_API_KEY }}
+        run: python generar_reporte.py
+
+      - name: Publicar cambios
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add index.html
+          git diff --quiet --cached || git commit -m "Actualización automática del reporte"
+          git push
