@@ -185,24 +185,6 @@ def generar_html(filas, historial, resumen):
     total = len(filas)
     vencidos = sum(1 for f in filas if f["vencido"])
 
-    # Ranking de técnicos
-    ranking = {}
-    for f in filas:
-        ag = f["agente"]
-        if ag not in ranking:
-            ranking[ag] = {"total": 0, "vencidos": 0}
-        ranking[ag]["total"] += 1
-        if f["vencido"]:
-            ranking[ag]["vencidos"] += 1
-    ranking_ordenado = sorted(ranking.items(), key=lambda x: (-x[1]["vencidos"], -x[1]["total"]))
-    filas_ranking = ""
-    for nombre, datos in ranking_ordenado:
-        pct = round((datos["vencidos"] / datos["total"] * 100), 0) if datos["total"] else 0
-        filas_ranking += f"""<tr>
-            <td>{nombre}</td><td>{datos['total']}</td>
-            <td style="color:{'var(--rojo)' if datos['vencidos'] > 0 else 'var(--verde)'}; font-weight:700;">{datos['vencidos']}</td>
-            <td>{pct}%</td></tr>"""
-
     html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -317,16 +299,8 @@ def generar_html(filas, historial, resumen):
     <div class="chart-box"><h3>Tickets por prioridad</h3><div class="ayuda">Clic para filtrar</div><canvas id="chartPrioridad"></canvas></div>
 </div>
 
-<div class="ranking-box">
-    <h3>🏆 Ranking de técnicos</h3>
-    <table>
-        <thead><tr><th>Técnico</th><th>Total abiertos</th><th>Vencidos</th><th>% vencidos</th></tr></thead>
-        <tbody>{filas_ranking}</tbody>
-    </table>
-</div>
-
 <div class="tabla-box">
-    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Detalle de tickets</h3>
+    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);" id="tituloTabla">Detalle de tickets</h3>
     <table id="tablaTickets">
         <thead><tr><th>ID</th><th>Asunto</th><th>Estado</th><th>Prioridad</th><th>Categoría</th><th>Técnico</th><th>Días vencido</th></tr></thead>
         <tbody id="cuerpoTabla"></tbody>
@@ -383,15 +357,18 @@ function renderKPIs(lista) {{
     document.getElementById('kpiPorcentaje').innerText = (total ? (vencidos/total*100).toFixed(1) : 0) + '%';
     document.getElementById('kpiCriticos').innerText = criticos;
 }}
-function actualizarContador() {{
+function actualizarContador() {
     const partes = [];
     if (estado.grupo) partes.push('Categoría: ' + estado.grupo);
     if (estado.agente) partes.push('Técnico: ' + estado.agente);
     if (estado.prioridad) partes.push('Prioridad: ' + estado.prioridad);
     if (estado.antiguedad) partes.push('Antigüedad: ' + estado.antiguedad);
     const total = ticketsFiltrados().length;
-    document.getElementById('contador').innerHTML = (partes.length ? partes.join(' · ') + ' — ' : '') + `Mostrando ${{total}} de ${{TODOS_LOS_TICKETS.length}} tickets`;
-}}
+    document.getElementById('contador').innerHTML = (partes.length ? partes.join(' · ') + ' — ' : '') + `Mostrando ${total} de ${TODOS_LOS_TICKETS.length} tickets`;
+
+    const tituloTabla = document.getElementById('tituloTabla');
+    tituloTabla.innerText = partes.length ? `Detalle de tickets — ${partes.join(' · ')}` : 'Detalle de tickets (todos)';
+}
 function crearChart(ref, canvasId, tipo, labels, data, colores, campoFiltro) {{
     if (ref) ref.destroy();
     return new Chart(document.getElementById(canvasId), {{
