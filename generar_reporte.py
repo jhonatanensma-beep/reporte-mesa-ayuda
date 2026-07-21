@@ -33,8 +33,6 @@ def validar_credenciales():
         sys.exit(1)
 
 
-import time  # agrega este import junto a los otros, arriba del archivo
-
 def obtener_paginado(endpoint, campo_lista):
     resultados = []
     page = 1
@@ -47,7 +45,6 @@ def obtener_paginado(endpoint, campo_lista):
         while True:
             resp = requests.get(url_final, auth=(API_KEY, "X"), timeout=30)
             if resp.status_code == 429:
-                # Freshdesk nos dice cuántos segundos esperar
                 espera = int(resp.headers.get("Retry-After", 10))
                 print(f"Límite de peticiones alcanzado, esperando {espera}s...")
                 time.sleep(espera + 1)
@@ -68,20 +65,17 @@ def obtener_paginado(endpoint, campo_lista):
         if len(lote) < 100:
             break
         page += 1
-        time.sleep(1)  # pequeña pausa entre páginas para no saturar la API
+        time.sleep(1)
         if page > 50:
             break
     return resultados
 
 
 def obtener_tickets():
-    # Sin filtro -> trae TODOS los tickets (cualquier agente, cualquier grupo).
-    # updated_since muy antiguo para traer el historial completo, no solo 30 días.
     tickets = obtener_paginado(
         "tickets?updated_since=2015-01-01T00:00:00Z&order_by=created_at&order_type=desc",
         "tickets"
     )
-    # Nos quedamos solo con Abiertos (2) y Pendientes (3)
     return [t for t in tickets if t.get("status") in (2, 3)]
 
 
@@ -108,14 +102,6 @@ def dias_vencido(due_by):
     return (ahora - fecha_limite).days
 
 
-def estado_texto(codigo):
-    return ESTADOS.get(codigo, "Desconocido")
-
-
-def prioridad_texto(p):
-    return PRIORIDADES.get(p, "N/A")
-
-
 def procesar_tickets(tickets, agentes, grupos):
     filas = []
     for t in tickets:
@@ -123,65 +109,19 @@ def procesar_tickets(tickets, agentes, grupos):
         filas.append({
             "id": t["id"],
             "asunto": t.get("subject", "(sin asunto)"),
-            "estado": estado_texto(t.get("status")),
-            "prioridad": prioridad_texto(t.get("priority")),
+            "estado": ESTADOS.get(t.get("status"), "Desconocido"),
+            "prioridad": PRIORIDADES.get(t.get("priority"), "N/A"),
             "grupo": grupos.get(t.get("group_id"), "Sin grupo"),
             "agente": agentes.get(t.get("responder_id"), "Sin asignar"),
-            "creado": t.get("created_at"),
-            "vence": t.get("due_by"),
             "dias_vencido": max(dias, 0),
             "vencido": dias >= DIAS_PARA_VENCIDO,
         })
     return filas
 
 
-def calcular_metricas(filas):
-    total = len(filas)
-    vencidos = sum(1 for f in filas if f["vencido"])
-    porcentaje = round((vencidos / total * 100), 1) if total else 0
-    por_grupo = Counter(f["grupo"] for f in filas)
-    por_agente = Counter(f["agente"] for f in filas)
-    por_prioridad = Counter(f["prioridad"] for f in filas)
-    return {
-        "total": total,
-        "vencidos": vencidos,
-        "porcentaje_vencidos": porcentaje,
-        "por_grupo": dict(por_grupo.most_common()),
-        "por_agente": dict(por_agente.most_common()),
-        "por_prioridad": dict(por_prioridad.most_common()),
-    }
-
-
-def generar_html(filas, metricas):
+def generar_html(filas):
     ahora = datetime.now().strftime("%d/%m/%Y %H:%M")
-    filas_ordenadas = sorted(filas, key=lambda f: f["dias_vencido"], reverse=True)
-
-    grupos_unicos = sorted(set(f["grupo"] for f in filas))
-    agentes_unicos = sorted(set(f["agente"] for f in filas))
-
-    opciones_grupo = "".join(f'<option value="{g}">{g}</option>' for g in grupos_unicos)
-    opciones_agente = "".join(f'<option value="{a}">{a}</option>' for a in agentes_unicos)
-
-    filas_tabla = ""
-    for f in filas_ordenadas:
-        clase = "fila-vencida" if f["vencido"] else ""
-        filas_tabla += f"""
-        <tr class="{clase}" data-grupo="{f['grupo']}" data-agente="{f['agente']}">
-            <td>{f['id']}</td>
-            <td>{f['asunto']}</td>
-            <td>{f['estado']}</td>
-            <td>{f['prioridad']}</td>
-            <td>{f['grupo']}</td>
-            <td>{f['agente']}</td>
-            <td>{f['dias_vencido']}</td>
-        </tr>"""
-
-    labels_grupo = json.dumps(list(metricas["por_grupo"].keys()))
-    data_grupo = json.dumps(list(metricas["por_grupo"].values()))
-    labels_agente = json.dumps(list(metricas["por_agente"].keys()))
-    data_agente = json.dumps(list(metricas["por_agente"].values()))
-    labels_prioridad = json.dumps(list(metricas["por_prioridad"].keys()))
-    data_prioridad = json.dumps(list(metricas["por_prioridad"].values()))
+    tickets_json = json.dumps(filas, ensure_ascii=False)
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -192,43 +132,53 @@ def generar_html(filas, metricas):
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
     :root {{
-        --teal: {COLOR_TEAL};
-        --teal-oscuro: {COLOR_TEAL_OSCURO};
-        --carbon: {COLOR_CARBON};
-        --rojo: {COLOR_ROJO};
-        --verde: {COLOR_VERDE};
-        --naranja: {COLOR_NARANJA};
+        --teal: {COLOR_TEAL}; --teal-oscuro: {COLOR_TEAL_OSCURO}; --carbon: {COLOR_CARBON};
+        --rojo: {COLOR_ROJO}; --verde: {COLOR_VERDE}; --naranja: {COLOR_NARANJA};
     }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #F4F6F7; color: var(--carbon); padding: 24px; }}
     header {{
         background: linear-gradient(135deg, var(--teal-oscuro), var(--teal));
-        color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 24px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        display: flex; align-items: center; gap: 20px;
+        color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 20px;
     }}
     header img {{ height: 60px; background: white; border-radius: 8px; padding: 6px; }}
     header .titulos h1 {{ font-size: 22px; margin-bottom: 4px; }}
     header .titulos p {{ opacity: 0.9; font-size: 13px; }}
-    .kpis {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }}
-    .kpi-card {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid var(--teal); }}
+
+    .filtros {{
+        background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
+        position: sticky; top: 12px; z-index: 10;
+    }}
+    .filtros label {{ font-size: 12px; font-weight: 700; color: var(--teal-oscuro); display: block; margin-bottom: 4px; }}
+    .filtros select {{ padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; min-width: 180px; }}
+    .filtros button {{
+        background: var(--carbon); color: white; border: none; padding: 9px 16px;
+        border-radius: 6px; cursor: pointer; font-size: 13px; align-self: flex-end;
+    }}
+    .filtros button:hover {{ opacity: 0.85; }}
+    .filtros .contador {{ margin-left: auto; font-size: 13px; color: #666; align-self: flex-end; }}
+    .filtro-activo {{ font-size: 12px; background: #E8F6F9; color: var(--teal-oscuro); padding: 4px 10px; border-radius: 20px; margin-top: 2px; display: inline-block; }}
+
+    .kpis {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }}
+    .kpi-card {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid var(--teal); transition: all 0.2s; }}
     .kpi-card.alerta {{ border-left-color: var(--rojo); }}
     .kpi-card .valor {{ font-size: 32px; font-weight: 700; }}
     .kpi-card .etiqueta {{ font-size: 13px; color: #666; margin-top: 4px; }}
-    .charts {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }}
+
+    .charts {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }}
     .chart-box {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
-    .chart-box h3 {{ font-size: 15px; margin-bottom: 12px; color: var(--teal-oscuro); }}
-    .filtros {{ background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }}
-    .filtros label {{ font-size: 13px; font-weight: 600; color: var(--teal-oscuro); margin-right: 6px; }}
-    .filtros select {{ padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }}
-    .filtros .contador {{ margin-left: auto; font-size: 13px; color: #666; }}
+    .chart-box h3 {{ font-size: 15px; margin-bottom: 4px; color: var(--teal-oscuro); }}
+    .chart-box .ayuda {{ font-size: 11px; color: #999; margin-bottom: 10px; }}
+    .chart-box canvas {{ cursor: pointer; }}
+
     .tabla-box {{ background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-    th {{ background: var(--carbon); color: white; text-align: left; padding: 10px 12px; position: sticky; top: 0; cursor: pointer; }}
+    th {{ background: var(--carbon); color: white; text-align: left; padding: 10px 12px; position: sticky; top: 0; }}
     td {{ padding: 8px 12px; border-bottom: 1px solid #eee; }}
-    .fila-vencida {{ background: #FDEDEC; }}
-    .fila-vencida td:last-child {{ color: var(--rojo); font-weight: 700; }}
-    .oculto {{ display: none; }}
+    tr.fila-vencida td:last-child {{ color: var(--rojo); font-weight: 700; }}
+    tr.fila-vencida {{ background: #FDEDEC; }}
     footer {{ text-align: center; color: #999; font-size: 12px; margin-top: 24px; }}
 </style>
 </head>
@@ -242,43 +192,54 @@ def generar_html(filas, metricas):
     </div>
 </header>
 
+<div class="filtros">
+    <div>
+        <label>Categoría</label>
+        <select id="filtroGrupo"><option value="">Todas</option></select>
+    </div>
+    <div>
+        <label>Técnico</label>
+        <select id="filtroAgente"><option value="">Todos</option></select>
+    </div>
+    <div>
+        <label>Prioridad</label>
+        <select id="filtroPrioridad"><option value="">Todas</option></select>
+    </div>
+    <button id="btnLimpiar">Quitar filtros</button>
+    <div class="contador" id="contador"></div>
+</div>
+
 <div class="kpis">
     <div class="kpi-card">
-        <div class="valor">{metricas['total']}</div>
+        <div class="valor" id="kpiTotal">0</div>
         <div class="etiqueta">Tickets abiertos / pendientes</div>
     </div>
     <div class="kpi-card alerta">
-        <div class="valor">{metricas['vencidos']}</div>
+        <div class="valor" id="kpiVencidos">0</div>
         <div class="etiqueta">Tickets vencidos (7+ días)</div>
     </div>
     <div class="kpi-card">
-        <div class="valor">{metricas['porcentaje_vencidos']}%</div>
+        <div class="valor" id="kpiPorcentaje">0%</div>
         <div class="etiqueta">Porcentaje de vencidos</div>
     </div>
 </div>
 
 <div class="charts">
-    <div class="chart-box"><h3>Tickets por categoría</h3><canvas id="chartGrupo"></canvas></div>
-    <div class="chart-box"><h3>Tickets por técnico</h3><canvas id="chartAgente"></canvas></div>
-    <div class="chart-box"><h3>Tickets por prioridad</h3><canvas id="chartPrioridad"></canvas></div>
-</div>
-
-<div class="filtros">
-    <div>
-        <label>Categoría</label>
-        <select id="filtroGrupo">
-            <option value="">Todas</option>
-            {opciones_grupo}
-        </select>
+    <div class="chart-box">
+        <h3>Tickets por categoría</h3>
+        <div class="ayuda">Haz clic en una barra para filtrar</div>
+        <canvas id="chartGrupo"></canvas>
     </div>
-    <div>
-        <label>Técnico</label>
-        <select id="filtroAgente">
-            <option value="">Todos</option>
-            {opciones_agente}
-        </select>
+    <div class="chart-box">
+        <h3>Tickets por técnico</h3>
+        <div class="ayuda">Haz clic en una barra para filtrar</div>
+        <canvas id="chartAgente"></canvas>
     </div>
-    <div class="contador" id="contador"></div>
+    <div class="chart-box">
+        <h3>Tickets por prioridad</h3>
+        <div class="ayuda">Haz clic en una porción para filtrar</div>
+        <canvas id="chartPrioridad"></canvas>
+    </div>
 </div>
 
 <div class="tabla-box">
@@ -287,57 +248,142 @@ def generar_html(filas, metricas):
         <thead>
             <tr><th>ID</th><th>Asunto</th><th>Estado</th><th>Prioridad</th><th>Categoría</th><th>Técnico</th><th>Días vencido</th></tr>
         </thead>
-        <tbody>
-            {filas_tabla}
-        </tbody>
+        <tbody id="cuerpoTabla"></tbody>
     </table>
 </div>
 
 <footer>Generado automáticamente vía GitHub Actions · Constructora Capital Medellín</footer>
 
 <script>
+const TODOS_LOS_TICKETS = {tickets_json};
 const colorTeal = '{COLOR_TEAL}';
 const colorNaranja = '{COLOR_NARANJA}';
 const colorRojo = '{COLOR_ROJO}';
 const colorVerde = '{COLOR_VERDE}';
 
-new Chart(document.getElementById('chartGrupo'), {{
-    type: 'bar',
-    data: {{ labels: {labels_grupo}, datasets: [{{ label: 'Tickets', data: {data_grupo}, backgroundColor: colorTeal }}] }},
-    options: {{ plugins: {{ legend: {{ display: false }} }}, responsive: true }}
-}});
-new Chart(document.getElementById('chartAgente'), {{
-    type: 'bar',
-    data: {{ labels: {labels_agente}, datasets: [{{ label: 'Tickets', data: {data_agente}, backgroundColor: colorNaranja }}] }},
-    options: {{ plugins: {{ legend: {{ display: false }} }}, responsive: true }}
-}});
-new Chart(document.getElementById('chartPrioridad'), {{
-    type: 'doughnut',
-    data: {{ labels: {labels_prioridad}, datasets: [{{ data: {data_prioridad}, backgroundColor: [colorVerde, colorTeal, colorNaranja, colorRojo] }}] }},
-    options: {{ responsive: true }}
-}});
+const estado = {{ grupo: null, agente: null, prioridad: null }};
+let chartGrupo, chartAgente, chartPrioridad;
 
-function aplicarFiltros() {{
-    const grupo = document.getElementById('filtroGrupo').value;
-    const agente = document.getElementById('filtroAgente').value;
-    const filas = document.querySelectorAll('#tablaTickets tbody tr');
-    let visibles = 0;
-    filas.forEach(fila => {{
-        const coincideGrupo = !grupo || fila.dataset.grupo === grupo;
-        const coincideAgente = !agente || fila.dataset.agente === agente;
-        if (coincideGrupo && coincideAgente) {{
-            fila.classList.remove('oculto');
-            visibles++;
-        }} else {{
-            fila.classList.add('oculto');
-        }}
+function poblarSelect(id, valores) {{
+    const select = document.getElementById(id);
+    valores.forEach(v => {{
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        select.appendChild(opt);
     }});
-    document.getElementById('contador').innerText = `Mostrando ${{visibles}} de ${{filas.length}} tickets`;
 }}
 
-document.getElementById('filtroGrupo').addEventListener('change', aplicarFiltros);
-document.getElementById('filtroAgente').addEventListener('change', aplicarFiltros);
-aplicarFiltros();
+function contar(lista, campo) {{
+    const conteo = {{}};
+    lista.forEach(t => {{ conteo[t[campo]] = (conteo[t[campo]] || 0) + 1; }});
+    return conteo;
+}}
+
+function ticketsFiltrados() {{
+    return TODOS_LOS_TICKETS.filter(t =>
+        (!estado.grupo || t.grupo === estado.grupo) &&
+        (!estado.agente || t.agente === estado.agente) &&
+        (!estado.prioridad || t.prioridad === estado.prioridad)
+    );
+}}
+
+function renderTabla(lista) {{
+    const cuerpo = document.getElementById('cuerpoTabla');
+    cuerpo.innerHTML = '';
+    const ordenados = [...lista].sort((a, b) => b.dias_vencido - a.dias_vencido);
+    ordenados.forEach(t => {{
+        const tr = document.createElement('tr');
+        if (t.vencido) tr.classList.add('fila-vencida');
+        tr.innerHTML = `<td>${{t.id}}</td><td>${{t.asunto}}</td><td>${{t.estado}}</td><td>${{t.prioridad}}</td><td>${{t.grupo}}</td><td>${{t.agente}}</td><td>${{t.dias_vencido}}</td>`;
+        cuerpo.appendChild(tr);
+    }});
+}}
+
+function renderKPIs(lista) {{
+    const total = lista.length;
+    const vencidos = lista.filter(t => t.vencido).length;
+    const pct = total ? ((vencidos / total) * 100).toFixed(1) : 0;
+    document.getElementById('kpiTotal').innerText = total;
+    document.getElementById('kpiVencidos').innerText = vencidos;
+    document.getElementById('kpiPorcentaje').innerText = pct + '%';
+}}
+
+function actualizarEtiquetasFiltro() {{
+    const partes = [];
+    if (estado.grupo) partes.push('Categoría: ' + estado.grupo);
+    if (estado.agente) partes.push('Técnico: ' + estado.agente);
+    if (estado.prioridad) partes.push('Prioridad: ' + estado.prioridad);
+    const contador = document.getElementById('contador');
+    const total = ticketsFiltrados().length;
+    contador.innerHTML = (partes.length ? partes.join(' · ') + ' — ' : '') + `Mostrando ${{total}} de ${{TODOS_LOS_TICKETS.length}} tickets`;
+}}
+
+function crearOActualizarChart(chartRef, canvasId, tipo, labels, data, colores, campoFiltro) {{
+    if (chartRef) chartRef.destroy();
+    const ctx = document.getElementById(canvasId);
+    const nuevo = new Chart(ctx, {{
+        type: tipo,
+        data: {{ labels: labels, datasets: [{{ data: data, backgroundColor: colores, label: 'Tickets' }}] }},
+        options: {{
+            responsive: true,
+            plugins: {{ legend: {{ display: tipo === 'doughnut' }} }},
+            onClick: (evt, elementos) => {{
+                if (!elementos.length) return;
+                const idx = elementos[0].index;
+                const valor = labels[idx];
+                if (estado[campoFiltro] === valor) {{
+                    estado[campoFiltro] = null;
+                }} else {{
+                    estado[campoFiltro] = valor;
+                }}
+                sincronizarSelects();
+                render();
+            }}
+        }}
+    }});
+    return nuevo;
+}}
+
+function sincronizarSelects() {{
+    document.getElementById('filtroGrupo').value = estado.grupo || '';
+    document.getElementById('filtroAgente').value = estado.agente || '';
+    document.getElementById('filtroPrioridad').value = estado.prioridad || '';
+}}
+
+function render() {{
+    const filtrados = ticketsFiltrados();
+    renderKPIs(filtrados);
+    renderTabla(filtrados);
+    actualizarEtiquetasFiltro();
+
+    const porGrupo = contar(filtrados, 'grupo');
+    chartGrupo = crearOActualizarChart(chartGrupo, 'chartGrupo', 'bar',
+        Object.keys(porGrupo), Object.values(porGrupo), colorTeal, 'grupo');
+
+    const porAgente = contar(filtrados, 'agente');
+    chartAgente = crearOActualizarChart(chartAgente, 'chartAgente', 'bar',
+        Object.keys(porAgente), Object.values(porAgente), colorNaranja, 'agente');
+
+    const porPrioridad = contar(filtrados, 'prioridad');
+    chartPrioridad = crearOActualizarChart(chartPrioridad, 'chartPrioridad', 'doughnut',
+        Object.keys(porPrioridad), Object.values(porPrioridad),
+        [colorVerde, colorTeal, colorNaranja, colorRojo], 'prioridad');
+}}
+
+// Poblar selects con valores únicos (sobre el total, no sobre el filtrado)
+poblarSelect('filtroGrupo', [...new Set(TODOS_LOS_TICKETS.map(t => t.grupo))].sort());
+poblarSelect('filtroAgente', [...new Set(TODOS_LOS_TICKETS.map(t => t.agente))].sort());
+poblarSelect('filtroPrioridad', [...new Set(TODOS_LOS_TICKETS.map(t => t.prioridad))].sort());
+
+document.getElementById('filtroGrupo').addEventListener('change', e => {{ estado.grupo = e.target.value || null; render(); }});
+document.getElementById('filtroAgente').addEventListener('change', e => {{ estado.agente = e.target.value || null; render(); }});
+document.getElementById('filtroPrioridad').addEventListener('change', e => {{ estado.prioridad = e.target.value || null; render(); }});
+document.getElementById('btnLimpiar').addEventListener('click', () => {{
+    estado.grupo = null; estado.agente = null; estado.prioridad = null;
+    sincronizarSelects(); render();
+}});
+
+render();
 </script>
 
 </body>
@@ -353,12 +399,10 @@ def main():
     grupos = obtener_grupos()
     print(f"Tickets encontrados: {len(tickets)}")
     filas = procesar_tickets(tickets, agentes, grupos)
-    metricas = calcular_metricas(filas)
-    html = generar_html(filas, metricas)
+    html = generar_html(filas)
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
     print("index.html generado correctamente.")
-    print(f"Total: {metricas['total']} | Vencidos: {metricas['vencidos']}")
 
 
 if __name__ == "__main__":
