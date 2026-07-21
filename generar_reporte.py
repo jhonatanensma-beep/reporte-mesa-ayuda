@@ -357,18 +357,18 @@ function renderKPIs(lista) {{
     document.getElementById('kpiPorcentaje').innerText = (total ? (vencidos/total*100).toFixed(1) : 0) + '%';
     document.getElementById('kpiCriticos').innerText = criticos;
 }}
-function actualizarContador() {
+function actualizarContador() {{
     const partes = [];
     if (estado.grupo) partes.push('Categoría: ' + estado.grupo);
     if (estado.agente) partes.push('Técnico: ' + estado.agente);
     if (estado.prioridad) partes.push('Prioridad: ' + estado.prioridad);
     if (estado.antiguedad) partes.push('Antigüedad: ' + estado.antiguedad);
     const total = ticketsFiltrados().length;
-    document.getElementById('contador').innerHTML = (partes.length ? partes.join(' · ') + ' — ' : '') + `Mostrando ${total} de ${TODOS_LOS_TICKETS.length} tickets`;
+    document.getElementById('contador').innerHTML = (partes.length ? partes.join(' · ') + ' — ' : '') + `Mostrando ${{total}} de ${{TODOS_LOS_TICKETS.length}} tickets`;
 
     const tituloTabla = document.getElementById('tituloTabla');
-    tituloTabla.innerText = partes.length ? `Detalle de tickets — ${partes.join(' · ')}` : 'Detalle de tickets (todos)';
-}
+    tituloTabla.innerText = partes.length ? `Detalle de tickets — ${{partes.join(' · ')}}` : 'Detalle de tickets (todos)';
+}}
 function crearChart(ref, canvasId, tipo, labels, data, colores, campoFiltro) {{
     if (ref) ref.destroy();
     return new Chart(document.getElementById(canvasId), {{
