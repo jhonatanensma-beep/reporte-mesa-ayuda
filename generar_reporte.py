@@ -602,7 +602,6 @@ render();
 </html>"""
     return html
 
-
 def main():
     validar_credenciales()
     print("Conectando a Freshdesk...")
@@ -613,7 +612,7 @@ def main():
     print(f"Tickets abiertos/pendientes: {len(tickets_abiertos)}")
     filas = procesar_tickets(tickets_abiertos, agentes, grupos)
 
-  inicio_semana, fin_semana = obtener_limites_semana()
+    inicio_semana, fin_semana = obtener_limites_semana()
     tickets_semana_raw = obtener_tickets_semana_raw(inicio_semana)
     tickets_cerrados_raw = [t for t in tickets_semana_raw if t.get("status") in (4, 5)]
     cerrados_semana = procesar_cerrados_semana(tickets_cerrados_raw, agentes, grupos, inicio_semana, fin_semana)
