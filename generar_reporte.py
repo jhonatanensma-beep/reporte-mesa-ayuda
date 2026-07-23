@@ -79,7 +79,7 @@ def obtener_tickets_abiertos():
 def obtener_limites_semana():
     """Semana operativa: sábado a viernes (corte los viernes)."""
     ahora = datetime.now(timezone.utc)
-    dias_hasta_viernes = (4 - ahora.weekday()) % 7  # 4 = viernes
+    dias_hasta_viernes = (4 - ahora.weekday()) % 7
     viernes = (ahora + timedelta(days=dias_hasta_viernes)).replace(
         hour=23, minute=59, second=59, microsecond=0)
     sabado_inicio = (viernes - timedelta(days=6)).replace(
@@ -87,12 +87,14 @@ def obtener_limites_semana():
     return sabado_inicio, viernes
 
 
-def obtener_tickets_semana_raw(inicio_semana):
+def obtener_tickets_cerrados_semana(inicio_semana):
     inicio_iso = inicio_semana.strftime("%Y-%m-%dT%H:%M:%SZ")
-    return obtener_paginado(
+    tickets = obtener_paginado(
         f"tickets?updated_since={inicio_iso}&include=stats&order_by=updated_at&order_type=desc",
         "tickets"
     )
+    return [t for t in tickets if t.get("status") in (4, 5)]
+
 
 def obtener_agentes():
     agentes = obtener_paginado("agents", "agents")
@@ -179,25 +181,6 @@ def procesar_cerrados_semana(tickets, agentes, grupos, inicio_semana, fin_semana
         })
     return filas
 
-def procesar_creados_semana(tickets, agentes, grupos, inicio_semana, fin_semana):
-    filas = []
-    for t in tickets:
-        creado_str = t.get("created_at")
-        if not creado_str:
-            continue
-        fecha_creado = datetime.fromisoformat(creado_str.replace("Z", "+00:00"))
-        if not (inicio_semana <= fecha_creado <= fin_semana):
-            continue
-        filas.append({
-            "id": t["id"],
-            "asunto": t.get("subject", "(sin asunto)"),
-            "grupo": grupos.get(t.get("group_id"), "Sin grupo"),
-            "agente": agentes.get(t.get("responder_id"), "Sin asignar"),
-            "prioridad": PRIORIDADES.get(t.get("priority"), "N/A"),
-            "estado": ESTADOS.get(t.get("status"), "Desconocido"),
-            "fecha_creacion": fecha_creado.strftime("%d/%m/%Y"),
-        })
-    return filas
 
 def actualizar_historial(total, vencidos):
     historial = []
@@ -215,10 +198,9 @@ def actualizar_historial(total, vencidos):
         json.dump(historial, f, ensure_ascii=False, indent=2)
     return historial
 
-def generar_resumen_ejecutivo(historial, total, vencidos, cerrados_semana, creados_semana):
-    neto = creados_semana - cerrados_semana
-    frase_neto = f"el backlog creció en {neto} tickets" if neto > 0 else (f"el backlog bajó en {abs(neto)} tickets" if neto < 0 else "el backlog se mantuvo estable")
-    base = f"Hoy hay {total} tickets abiertos ({vencidos} vencidos). Esta semana han llegado {creados_semana} tickets y se han cerrado {cerrados_semana} — {frase_neto}."
+
+def generar_resumen_ejecutivo(historial, total, vencidos, cerrados_semana):
+    base = f"Hoy hay {total} tickets abiertos ({vencidos} vencidos). Esta semana se han cerrado {cerrados_semana} tickets."
     if len(historial) < 2:
         return base
     anterior = historial[-2]
@@ -236,16 +218,13 @@ def generar_resumen_ejecutivo(historial, total, vencidos, cerrados_semana, cread
             f"{texto_diferencia(dif_total, 'tickets abiertos')} y {texto_diferencia(dif_vencidos, 'tickets vencidos')}.")
 
 
-def generar_html(filas, historial, resumen, cerrados_semana, creados_semana, inicio_semana, fin_semana):
+def generar_html(filas, historial, resumen, cerrados_semana, inicio_semana, fin_semana):
     ahora = datetime.now().strftime("%d/%m/%Y %H:%M")
     tickets_json = json.dumps(filas, ensure_ascii=False)
     cerrados_json = json.dumps(cerrados_semana, ensure_ascii=False)
-    creados_json = json.dumps(creados_semana, ensure_ascii=False)
     rango_semana = f"{inicio_semana.strftime('%d/%m/%Y')} al {fin_semana.strftime('%d/%m/%Y')}"
 
     total_cerrados = len(cerrados_semana)
-    total_creados = len(creados_semana)
-    neto_semana = total_creados - total_cerrados
     horas_validas = [c["horas_resolucion"] for c in cerrados_semana if c["horas_resolucion"] is not None]
     promedio_horas = round(sum(horas_validas) / len(horas_validas), 1) if horas_validas else 0
 
@@ -344,16 +323,8 @@ def generar_html(filas, historial, resumen, cerrados_semana, creados_semana, ini
 
 <div class="kpis">
     <div class="kpi-card exito">
-        <div class="valor">{total_creados}</div>
-        <div class="etiqueta">Tickets que llegaron esta semana</div>
-    </div>
-    <div class="kpi-card exito">
         <div class="valor">{total_cerrados}</div>
         <div class="etiqueta">Tickets cerrados esta semana</div>
-    </div>
-    <div class="kpi-card {'alerta' if neto_semana > 0 else 'exito'}">
-        <div class="valor">{'+' if neto_semana > 0 else ''}{neto_semana}</div>
-        <div class="etiqueta">Balance neto del backlog</div>
     </div>
     <div class="kpi-card">
         <div class="valor">{promedio_horas}h</div>
@@ -362,10 +333,6 @@ def generar_html(filas, historial, resumen, cerrados_semana, creados_semana, ini
 </div>
 
 <div class="charts">
-    <div class="chart-box">
-        <h3>Llegaron vs. Cerrados esta semana</h3>
-        <canvas id="chartComparativo"></canvas>
-    </div>
     <div class="chart-box">
         <h3>Cerrados esta semana por técnico</h3>
         <canvas id="chartCerradosAgente"></canvas>
@@ -377,15 +344,7 @@ def generar_html(filas, historial, resumen, cerrados_semana, creados_semana, ini
 </div>
 
 <div class="tabla-box">
-    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Tickets que llegaron esta semana</h3>
-    <table id="tablaCreados">
-        <thead><tr><th>ID</th><th>Asunto</th><th>Categoría</th><th>Técnico</th><th>Prioridad</th><th>Estado actual</th><th>Fecha de creación</th></tr></thead>
-        <tbody id="cuerpoTablaCreados"></tbody>
-    </table>
-</div>
-
-<div class="tabla-box">
-    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Tickets cerrados esta semana</h3>
+    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Detalle de tickets cerrados esta semana</h3>
     <table id="tablaCerrados">
         <thead><tr><th>ID</th><th>Asunto</th><th>Categoría</th><th>Técnico</th><th>Prioridad</th><th>Fecha de cierre</th><th>Horas de resolución</th></tr></thead>
         <tbody id="cuerpoTablaCerrados"></tbody>
@@ -432,7 +391,6 @@ def generar_html(filas, historial, resumen, cerrados_semana, creados_semana, ini
 <script>
 const TODOS_LOS_TICKETS = {tickets_json};
 const CERRADOS_SEMANA = {cerrados_json};
-const CREADOS_SEMANA = {creados_json};
 const colorTeal = '{COLOR_TEAL}', colorNaranja = '{COLOR_NARANJA}', colorRojo = '{COLOR_ROJO}', colorVerde = '{COLOR_VERDE}';
 
 const estado = {{ grupo: null, agente: null, prioridad: null, antiguedad: null, texto: '' }};
@@ -444,7 +402,6 @@ function contarLista(lista, campo) {{
     return conteo;
 }}
 
-// ---- Tabla y gráficas de cerrados esta semana (fijo, no se filtra) ----
 const cuerpoCerrados = document.getElementById('cuerpoTablaCerrados');
 CERRADOS_SEMANA.forEach(c => {{
     const tr = document.createElement('tr');
@@ -464,28 +421,6 @@ new Chart(document.getElementById('chartCerradosGrupo'), {{
     options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }} }}
 }});
 
-// Tabla de creados
-const cuerpoCreados = document.getElementById('cuerpoTablaCreados');
-CREADOS_SEMANA.forEach(c => {{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${{c.id}}</td><td>${{c.asunto}}</td><td>${{c.grupo}}</td><td>${{c.agente}}</td><td>${{c.prioridad}}</td><td>${{c.estado}}</td><td>${{c.fecha_creacion}}</td>`;
-    cuerpoCreados.appendChild(tr);
-}});
-
-// Gráfica comparativa Llegaron vs Cerrados
-new Chart(document.getElementById('chartComparativo'), {{
-    type: 'bar',
-    data: {{
-        labels: ['Esta semana'],
-        datasets: [
-            {{ label: 'Llegaron', data: [CREADOS_SEMANA.length], backgroundColor: colorNaranja }},
-            {{ label: 'Cerrados', data: [CERRADOS_SEMANA.length], backgroundColor: colorVerde }}
-        ]
-    }},
-    options: {{ responsive: true, plugins: {{ legend: {{ display: true }} }} }}
-}});
-
-// ---- Tickets abiertos (filtrable) ----
 function poblarSelect(id, valores) {{
     const select = document.getElementById(id);
     valores.forEach(v => {{ const opt = document.createElement('option'); opt.value = v; opt.textContent = v; select.appendChild(opt); }});
@@ -602,6 +537,7 @@ render();
 </html>"""
     return html
 
+
 def main():
     validar_credenciales()
     print("Conectando a Freshdesk...")
@@ -613,18 +549,16 @@ def main():
     filas = procesar_tickets(tickets_abiertos, agentes, grupos)
 
     inicio_semana, fin_semana = obtener_limites_semana()
-    tickets_semana_raw = obtener_tickets_semana_raw(inicio_semana)
-    tickets_cerrados_raw = [t for t in tickets_semana_raw if t.get("status") in (4, 5)]
+    tickets_cerrados_raw = obtener_tickets_cerrados_semana(inicio_semana)
     cerrados_semana = procesar_cerrados_semana(tickets_cerrados_raw, agentes, grupos, inicio_semana, fin_semana)
-    creados_semana = procesar_creados_semana(tickets_semana_raw, agentes, grupos, inicio_semana, fin_semana)
-    print(f"Semana {inicio_semana.date()} a {fin_semana.date()} — Llegaron: {len(creados_semana)} | Cerrados: {len(cerrados_semana)}")
+    print(f"Tickets cerrados esta semana ({inicio_semana.date()} a {fin_semana.date()}): {len(cerrados_semana)}")
 
     total = len(filas)
     vencidos = sum(1 for f in filas if f["vencido"])
     historial = actualizar_historial(total, vencidos)
-    resumen = generar_resumen_ejecutivo(historial, total, vencidos, len(cerrados_semana), len(creados_semana))
+    resumen = generar_resumen_ejecutivo(historial, total, vencidos, len(cerrados_semana))
 
-    html = generar_html(filas, historial, resumen, cerrados_semana, creados_semana, inicio_semana, fin_semana)
+    html = generar_html(filas, historial, resumen, cerrados_semana, inicio_semana, fin_semana)
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
