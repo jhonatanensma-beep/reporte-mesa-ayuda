@@ -343,13 +343,6 @@ def generar_html(filas, historial, resumen, cerrados_semana, inicio_semana, fin_
     </div>
 </div>
 
-<div class="tabla-box">
-    <h3 style="margin-bottom:12px; color:var(--teal-oscuro);">Detalle de tickets cerrados esta semana</h3>
-    <table id="tablaCerrados">
-        <thead><tr><th>ID</th><th>Asunto</th><th>Categoría</th><th>Técnico</th><th>Prioridad</th><th>Fecha de cierre</th><th>Horas de resolución</th></tr></thead>
-        <tbody id="cuerpoTablaCerrados"></tbody>
-    </table>
-</div>
 
 <div class="seccion-titulo">📋 Estado actual — tickets abiertos y pendientes</div>
 
@@ -402,12 +395,6 @@ function contarLista(lista, campo) {{
     return conteo;
 }}
 
-const cuerpoCerrados = document.getElementById('cuerpoTablaCerrados');
-CERRADOS_SEMANA.forEach(c => {{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${{c.id}}</td><td>${{c.asunto}}</td><td>${{c.grupo}}</td><td>${{c.agente}}</td><td>${{c.prioridad}}</td><td>${{c.fecha_cierre}}</td><td>${{c.horas_resolucion ?? '-'}}</td>`;
-    cuerpoCerrados.appendChild(tr);
-}});
 const pcAgente = contarLista(CERRADOS_SEMANA, 'agente');
 new Chart(document.getElementById('chartCerradosAgente'), {{
     type: 'bar',
