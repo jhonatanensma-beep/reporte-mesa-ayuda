@@ -58,5 +58,10 @@
     "fecha": "2026-08-01",
     "total": 97,
     "vencidos": 40
+  },
+  {
+    "fecha": "2026-08-02",
+    "total": 97,
+    "vencidos": 40
   }
 ]
