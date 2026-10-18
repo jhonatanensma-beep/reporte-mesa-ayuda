@@ -428,5 +428,10 @@
     "fecha": "2026-10-17",
     "total": 81,
     "vencidos": 52
+  },
+  {
+    "fecha": "2026-10-18",
+    "total": 80,
+    "vencidos": 55
   }
 ]
