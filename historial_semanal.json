@@ -1,10 +1,5 @@
 [
   {
-    "fecha": "2026-08-18",
-    "total": 114,
-    "vencidos": 59
-  },
-  {
     "fecha": "2026-08-19",
     "total": 117,
     "vencidos": 61
@@ -448,5 +443,10 @@
     "fecha": "2026-11-17",
     "total": 97,
     "vencidos": 49
+  },
+  {
+    "fecha": "2026-11-18",
+    "total": 98,
+    "vencidos": 45
   }
 ]
